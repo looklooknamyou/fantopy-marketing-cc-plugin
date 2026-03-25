@@ -1,0 +1,60 @@
+name: Agent 14 — Beat the Bot
+
+on:
+  schedule:
+    # Reminders: 2h before typical GW deadlines (Fri/Sat 09:30 UTC)
+    - cron: "30 9 * * 5"    # Friday reminder
+    - cron: "30 9 * * 6"    # Saturday reminder
+    # Results: after typical GW finalise (Tue/Wed 07:00 UTC)
+    - cron: "0 7 * * 2"     # Tuesday results
+    - cron: "0 7 * * 3"     # Wednesday results
+    # Weekly leaderboard: Sunday 10:00 UTC
+    - cron: "0 10 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "reminders | results | leaderboard"
+        required: true
+        default: "results"
+      gameweek:
+        description: "Gameweek number (leave blank for current)"
+        required: false
+      contest_id:
+        description: "Fantopy contest ID for this GW"
+        required: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run Beat the Bot
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FANTOPY_API_KEY: ${{ secrets.FANTOPY_API_KEY }}
+          FANTOPY_API_BASE_URL: ${{ secrets.FANTOPY_API_BASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          MODE="${{ github.event.inputs.mode }}"
+          GW="${{ github.event.inputs.gameweek }}"
+          CID="${{ github.event.inputs.contest_id }}"
+          GW_FLAG=$([ -n "$GW" ] && echo "--gameweek $GW" || echo "")
+          CID_FLAG=$([ -n "$CID" ] && echo "--contest-id $CID" || echo "")
+          if [ "$MODE" = "reminders" ]; then
+            python agents/agent_14_beat_the_bot.py --reminders $GW_FLAG
+          elif [ "$MODE" = "leaderboard" ]; then
+            python agents/agent_14_beat_the_bot.py --leaderboard
+          else
+            python agents/agent_14_beat_the_bot.py --results $GW_FLAG $CID_FLAG
+          fi

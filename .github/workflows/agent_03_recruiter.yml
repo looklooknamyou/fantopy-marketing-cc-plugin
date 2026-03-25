@@ -1,0 +1,32 @@
+name: Agent 03 — The Recruiter
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub UI
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Recruiter agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_FANTOPY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          python agents/agent_03_recruiter.py

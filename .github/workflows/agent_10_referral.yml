@@ -1,0 +1,26 @@
+name: Agent 10 — Referral Tracker (daily payouts)
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # Daily at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run Referral Tracker
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+          PLATFORM_WALLET_KEYPAIR_B58: ${{ secrets.PLATFORM_WALLET_KEYPAIR_B58 }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REFERRAL_REWARD_USDC: "5"
+          REFERRAL_MIN_PAYOUT: "10"
+        run: python agents/agent_10_referral_tracker.py --batch-payouts

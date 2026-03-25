@@ -1,0 +1,27 @@
+name: Agent 15 — Waitlist Nurturer (daily batch)
+
+on:
+  schedule:
+    - cron: "0 9 * * *"    # Every day at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Nurturer batch
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python agents/agent_15_waitlist_nurturer.py --batch

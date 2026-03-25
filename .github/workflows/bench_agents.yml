@@ -1,0 +1,129 @@
+name: Bench Agents (6, 7, 8, 11, 12)
+
+on:
+  schedule:
+    - cron: "0 6 * * 2"    # Agent 6 SEO — Tuesday 06:00 UTC
+    - cron: "0 8 * * 0"    # Agent 7 Reddit — Sunday 08:00 UTC (every 48h effectively via manual)
+    - cron: "0 9 * * 1"    # Agent 8 Partnership Scout — Monday 09:00 UTC
+    - cron: "0 8 * * 0"    # Agent 11 Influencer — Sunday 08:00 UTC
+    - cron: "0 9 * * 0"    # Agent 12 Press — Sunday 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Which agent to run: seo | reddit | partnership | influencer | press"
+        required: true
+      milestone:
+        description: "Milestone description (Agent 12 only)"
+        required: false
+
+jobs:
+  seo:
+    if: github.event_name == 'schedule' || github.event.inputs.agent == 'seo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run SEO Farmer
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          python agents/agent_06_seo_farmer.py
+
+  reddit:
+    if: github.event_name == 'schedule' || github.event.inputs.agent == 'reddit'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run Reddit Persona
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          python agents/agent_07_reddit_persona.py
+
+  partnership:
+    if: github.event_name == 'schedule' || github.event.inputs.agent == 'partnership'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run Partnership Scout
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_FANTOPY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          python agents/agent_08_partnership_scout.py
+
+  influencer:
+    if: github.event_name == 'schedule' || github.event.inputs.agent == 'influencer'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run Influencer Identifier
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          python agents/agent_11_influencer_identifier.py
+
+  press:
+    if: github.event_name == 'schedule' || github.event.inputs.agent == 'press'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run Press Pitcher
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          RECRUITER_SHEET_ID: ${{ secrets.RECRUITER_SHEET_ID }}
+          GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON: /tmp/gsa.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo '${{ secrets.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON }}' > /tmp/gsa.json
+          MILESTONE="${{ github.event.inputs.milestone }}"
+          if [ -n "$MILESTONE" ]; then
+            python agents/agent_12_press_pitcher.py --milestone "$MILESTONE"
+          else
+            python agents/agent_12_press_pitcher.py
+          fi

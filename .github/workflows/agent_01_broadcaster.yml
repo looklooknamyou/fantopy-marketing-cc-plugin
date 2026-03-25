@@ -1,0 +1,44 @@
+name: Agent 01 — The Broadcaster
+
+on:
+  # Cron fallback — runs after typical GW deadline windows.
+  # Real trigger is the MCP SSE stream (run --listen as a service).
+  # This cron polls for any missed contest.scored events.
+  schedule:
+    - cron: "30 22 * * 2,5,6,0"   # Tue/Fri/Sat/Sun 22:30 UTC (after typical EPL matches)
+  workflow_dispatch:
+    inputs:
+      contest_id:
+        description: "Specific contest ID to process (optional)"
+        required: false
+
+jobs:
+  broadcast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Broadcaster (poll mode)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FANTOPY_API_KEY: ${{ secrets.FANTOPY_API_KEY }}
+          FANTOPY_API_BASE_URL: ${{ secrets.FANTOPY_API_BASE_URL }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          MOLTBOOK_API_KEY: ${{ secrets.MOLTBOOK_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.contest_id }}" ]; then
+            python agents/agent_01_broadcaster.py --contest-id "${{ github.event.inputs.contest_id }}"
+          else
+            python agents/agent_01_broadcaster.py --poll
+          fi
