@@ -1,0 +1,69 @@
+{
+  "mode": "full-funnel",
+  "campaign": "AI Project Management Tool for Remote Teams",
+  "slug": "ai-project-management-launch",
+  "startTime": "2026-03-25T12:00:00Z",
+  "endTime": "2026-03-25T16:10:00Z",
+  "status": "complete",
+  "progress": { "current": 6, "total": 6 },
+  "stages": [
+    { "id": "setup", "name": "Setup", "status": "done", "startTime": "2026-03-25T12:00:00Z", "endTime": "2026-03-25T12:00:05Z" },
+    { "id": "research", "name": "Research", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:04:30Z",
+      "agents": [
+        { "name": "Market Researcher", "type": "market-researcher", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:03:45Z" },
+        { "name": "Competitive Analyst", "type": "competitive-analyst", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:04:30Z" },
+        { "name": "Trend Analyst", "type": "trend-analyst", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:02:50Z" }
+      ]
+    },
+    { "id": "strategy", "name": "Strategy", "status": "done", "startTime": "2026-03-25T12:04:31Z", "endTime": "2026-03-25T12:14:20Z" },
+    { "id": "content", "name": "Content + SEO", "status": "done", "startTime": "2026-03-25T12:14:21Z", "endTime": "2026-03-25T15:52:00Z",
+      "agents": [
+        { "name": "Content Marketer", "type": "content-marketer", "status": "done", "startTime": "2026-03-25T12:14:21Z", "endTime": "2026-03-25T15:40:00Z" },
+        { "name": "SEO Specialist", "type": "seo-specialist", "status": "done", "startTime": "2026-03-25T12:14:21Z", "endTime": "2026-03-25T15:52:00Z" }
+      ]
+    },
+    { "id": "review", "name": "Review", "status": "done", "startTime": "2026-03-25T15:52:01Z", "endTime": "2026-03-25T16:05:00Z",
+      "agents": [
+        { "name": "Business Analyst", "type": "business-analyst", "status": "done", "startTime": "2026-03-25T15:52:01Z", "endTime": "2026-03-25T16:03:00Z" },
+        { "name": "Sales Engineer", "type": "sales-engineer", "status": "done", "startTime": "2026-03-25T15:52:01Z", "endTime": "2026-03-25T16:05:00Z" }
+      ]
+    },
+    { "id": "final", "name": "Final Report", "status": "done", "startTime": "2026-03-25T16:05:01Z", "endTime": "2026-03-25T16:10:00Z" }
+  ],
+  "deliverables": [
+    { "name": "campaign-brief.md", "path": "00-brief/campaign-brief.md", "size": "1.2 KB", "status": "done" },
+    { "name": "market-analysis.md", "path": "01-research/market-analysis.md", "size": "42.5 KB", "status": "done" },
+    { "name": "competitive-intelligence.md", "path": "01-research/competitive-intelligence.md", "size": "25.8 KB", "status": "done" },
+    { "name": "trend-analysis.md", "path": "01-research/trend-analysis.md", "size": "37.3 KB", "status": "done" },
+    { "name": "marketing-strategy.md", "path": "02-strategy/marketing-strategy.md", "size": "28.4 KB", "status": "done" },
+    { "name": "target-audience.md", "path": "02-strategy/target-audience.md", "size": "27.6 KB", "status": "done" },
+    { "name": "blog-post.md", "path": "03-content/blog-posts/ai-pm-remote-teams-blog.md", "size": "12.8 KB", "status": "done" },
+    { "name": "social-media-pack.md", "path": "03-content/social-media/social-media-pack.md", "size": "8.4 KB", "status": "done" },
+    { "name": "email-sequence.md", "path": "03-content/email-campaigns/email-sequence.md", "size": "15.2 KB", "status": "done" },
+    { "name": "landing-page-copy.md", "path": "03-content/landing-pages/landing-page-copy.md", "size": "10.6 KB", "status": "done" },
+    { "name": "keyword-research.md", "path": "04-seo/keyword-research.md", "size": "28.5 KB", "status": "done" },
+    { "name": "seo-recommendations.md", "path": "04-seo/seo-recommendations.md", "size": "48.2 KB", "status": "done" },
+    { "name": "quality-review.md", "path": "05-review/quality-review.md", "size": "18.6 KB", "status": "done" },
+    { "name": "sales-alignment.md", "path": "05-review/sales-alignment.md", "size": "22.4 KB", "status": "done" },
+    { "name": "executive-summary.md", "path": "06-final/executive-summary.md", "size": "5.8 KB", "status": "done" },
+    { "name": "README.md", "path": "README.md", "size": "3.2 KB", "status": "done" }
+  ],
+  "activities": [
+    { "time": "12:00:00", "message": "Pipeline started (full-funnel)", "level": "info" },
+    { "time": "12:00:05", "message": "Setup complete - directories created, brief written", "level": "success" },
+    { "time": "12:00:06", "message": "Spawning 3 research agents in parallel...", "level": "info" },
+    { "time": "12:02:50", "message": "Trend analysis complete (832 lines)", "level": "success" },
+    { "time": "12:03:45", "message": "Market research complete (987 lines)", "level": "success" },
+    { "time": "12:04:30", "message": "Competitive intelligence complete (563 lines)", "level": "success" },
+    { "time": "12:04:31", "message": "Starting strategy synthesis...", "level": "info" },
+    { "time": "12:14:20", "message": "Strategy synthesis complete (marketing-strategy.md + target-audience.md)", "level": "success" },
+    { "time": "12:14:21", "message": "Spawning content marketer + SEO specialist in parallel...", "level": "info" },
+    { "time": "15:40:00", "message": "Content marketer complete (blog, social, email, landing page)", "level": "success" },
+    { "time": "15:52:00", "message": "SEO specialist complete (keyword-research.md + seo-recommendations.md)", "level": "success" },
+    { "time": "15:52:01", "message": "Spawning business analyst + sales engineer for review...", "level": "info" },
+    { "time": "16:03:00", "message": "Quality review complete (score: 8.2/10)", "level": "success" },
+    { "time": "16:05:00", "message": "Sales alignment review complete (score: 6.5/10)", "level": "success" },
+    { "time": "16:05:01", "message": "Compiling final report...", "level": "info" },
+    { "time": "16:10:00", "message": "Pipeline complete! 16 deliverables, 7,843 lines, ~500 KB", "level": "success" }
+  ]
+}
