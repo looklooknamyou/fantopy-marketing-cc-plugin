@@ -1,6 +1,6 @@
 # Marketing Pipeline Plugin for Claude Code
 
-An autonomous multi-agent marketing pipeline that orchestrates 8+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, SEO optimization, and quality review — all from a single command.
+An autonomous multi-agent marketing pipeline that orchestrates 9+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, AI-generated images and video clips, SEO optimization, and quality review — all from a single command.
 
 ## What It Does
 
@@ -8,9 +8,10 @@ You give it a campaign brief. It autonomously:
 
 1. **Researches** your market, competitors, and trends (3 agents in parallel)
 2. **Synthesizes** a marketing strategy with detailed buyer personas
-3. **Creates content** — blog posts, social media, email sequences, landing pages (3 agents in parallel)
+3. **Creates content** — blog posts, social media, email sequences, landing pages (4 agents in parallel)
 4. **Produces videos** — product launch hero, social media clip, and animated stats video using [Remotion](https://github.com/remotion-dev/remotion)
-5. **Optimizes for SEO** — keyword research, on-page recommendations, link building strategy
+5. **Generates AI visuals** — hero banners, social graphics, blog headers, and product teaser video using [Gemini API](https://ai.google.dev/gemini-api/docs) (Imagen + Veo 2)
+6. **Optimizes for SEO** — keyword research, on-page recommendations, link building strategy
 6. **Reviews everything** — quality assessment + sales alignment review (2 agents in parallel)
 7. **Compiles** an executive summary with prioritized action items
 
@@ -18,7 +19,7 @@ All while showing real-time progress on a terminal-themed web dashboard.
 
 ## Output Example
 
-A single `/marketing campaign` run produces **17-19 deliverables** — text content + motion graphics videos:
+A single `/marketing campaign` run produces **21-23 deliverables** — text content, motion graphics videos, and AI-generated visuals:
 
 ```
 marketing-output/your-campaign-slug/
@@ -35,10 +36,15 @@ marketing-output/your-campaign-slug/
 │   ├── social-media/               (~310 lines)
 │   ├── email-campaigns/            (~330 lines)
 │   ├── landing-pages/              (~300 lines)
-│   └── videos/
-│       ├── product-hero.mp4        (30s, 1920x1080)
-│       ├── social-clip.mp4         (15s, 1080x1080)
-│       └── stats-video.mp4         (20s, 1920x1080)
+│   ├── videos/
+│   │   ├── product-hero.mp4        (30s, 1920x1080)
+│   │   ├── social-clip.mp4         (15s, 1080x1080)
+│   │   └── stats-video.mp4         (20s, 1920x1080)
+│   └── media/
+│       ├── hero-banner.png         (1920x1080, AI-generated)
+│       ├── social-graphic.png      (1080x1080, AI-generated)
+│       ├── blog-header.png         (1920x1080, AI-generated)
+│       └── product-teaser.mp4      (720p, 8s, AI-generated)
 ├── 04-seo/
 │   ├── keyword-research.md         (~580 lines)
 │   └── seo-recommendations.md      (~980 lines)
@@ -110,7 +116,7 @@ You should see the help text with available commands.
 
 | Command | Description | Agents | Stages |
 |---------|-------------|--------|--------|
-| `/marketing campaign <brief>` | Full-funnel campaign | 8 agents | 6 stages |
+| `/marketing campaign <brief>` | Full-funnel campaign | 9 agents | 6 stages |
 | `/marketing content <topic>` | Content production only | 4 agents | 5 stages |
 | `/marketing research <topic>` | Market intelligence only | 5 agents | 4 stages |
 | `/marketing status` | Check pipeline progress | — | — |
@@ -174,10 +180,11 @@ Stage 2: Research (PARALLEL)
 Stage 3: Strategy (SEQUENTIAL)
     └── Orchestrator synthesizes → marketing-strategy.md + target-audience.md
 
-Stage 4: Content + SEO + Video (PARALLEL)
+Stage 4: Content + SEO + Video + Media (PARALLEL)
     ├── Content Marketer ───────→ blog, social, email, landing page
     ├── SEO Specialist ─────────→ keyword-research.md + seo-recommendations.md
-    └── Video Producer ─────────→ product-hero.mp4, social-clip.mp4, stats-video.mp4
+    ├── Video Producer ─────────→ product-hero.mp4, social-clip.mp4, stats-video.mp4
+    └── Media Producer ─────────→ hero-banner.png, social-graphic.png, blog-header.png, product-teaser.mp4
 
 Stage 5: Review (PARALLEL)
     ├── Business Analyst ───────→ quality-review.md
@@ -199,6 +206,7 @@ Agents within the same stage run **in parallel**. Stages run **sequentially** (e
 | Content Marketer | content-marketer | haiku | Blog, social, email, landing pages |
 | SEO Specialist | seo-specialist | haiku | Keywords, on-page SEO, link strategy |
 | Video Producer | general-purpose | sonnet | Motion graphics videos via Remotion (product hero, social clip, stats) |
+| Media Producer | gemini-media-producer | sonnet | AI-generated images + video via Gemini API (Imagen + Veo 2) |
 | Business Analyst | business-analyst | sonnet | Quality review, gap analysis |
 | Sales Engineer | sales-engineer | sonnet | Sales readiness, competitive positioning |
 | Orchestrator | marketing-orchestrator | opus | Coordinates all agents, synthesizes strategy |
@@ -228,7 +236,8 @@ marketing-pipeline/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata and registration
 ├── agents/
-│   └── marketing-orchestrator.md # Core orchestrator (opus model)
+│   ├── marketing-orchestrator.md # Core orchestrator (opus model)
+│   └── gemini-media-producer.md  # AI media generation agent (Gemini API)
 ├── commands/
 │   ├── marketing.md             # Main router command
 │   ├── marketing-campaign.md    # Full funnel shortcut
@@ -237,6 +246,9 @@ marketing-pipeline/
 │   └── marketing-status.md      # Pipeline status checker
 └── assets/
     ├── pipeline-dashboard.html  # Real-time monitoring dashboard (1,900+ lines)
+    ├── gemini-media/             # AI media generation via Gemini API
+    │   ├── generate_media.py    # Image + video generation script
+    │   └── requirements.txt     # Python deps (google-genai)
     └── remotion-template/       # Video generation template project
         ├── package.json
         ├── tsconfig.json
@@ -257,6 +269,7 @@ marketing-pipeline/
 - **Claude Code** with plugin support
 - **Python 3** (for the dashboard HTTP server — pre-installed on macOS/Linux)
 - **Node.js 18+** (for Remotion video rendering)
+- **`GEMINI_API_KEY`** environment variable (for AI image/video generation via Gemini API — get one at [ai.google.dev](https://ai.google.dev/))
 - **Subagent types** must be available: market-researcher, competitive-analyst, trend-analyst, content-marketer, seo-specialist, business-analyst, sales-engineer. These come from the [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) collection or can be custom `.md` files in `~/.claude/agents/`.
 
 ## How It Works Internally

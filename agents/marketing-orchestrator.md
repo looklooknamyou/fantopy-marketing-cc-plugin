@@ -70,7 +70,7 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
       ]
     },
     { "id": "strategy", "name": "Strategy", "status": "pending" },
-    { "id": "content", "name": "Content + SEO + Video", "status": "pending" },
+    { "id": "content", "name": "Content + SEO + Video + Media", "status": "pending" },
     { "id": "review", "name": "Review", "status": "pending" },
     { "id": "final", "name": "Final Report", "status": "pending" }
   ],
@@ -113,6 +113,8 @@ Spawn these using the Task tool with the matching `subagent_type`:
 | seo-specialist | Keyword research, on-page SEO, content optimization, technical SEO | haiku |
 | content-marketer | Content strategy, blog posts, social media, email campaigns, landing pages | haiku |
 | general-purpose (Video Producer) | Motion graphics videos using Remotion — product hero, social clips, stats animations | sonnet |
+| gemini-media-producer | AI-generated images (hero banners, social graphics) and video clips via Gemini API | sonnet |
+| web-scraper | Web scraping, structured data extraction, JS-rendered pages (Playwright/BeautifulSoup) | sonnet |
 | business-analyst | Requirements analysis, process optimization, ROI calculation, strategic planning | sonnet |
 | sales-engineer | Technical sales content, solution architecture, competitive positioning | sonnet |
 
@@ -135,6 +137,10 @@ README.md                           # Table of contents
 03-content/videos/product-hero.mp4
 03-content/videos/social-clip.mp4
 03-content/videos/stats-video.mp4
+03-content/media/hero-banner.png
+03-content/media/social-graphic.png
+03-content/media/blog-header.png
+03-content/media/product-teaser.mp4
 04-seo/keyword-research.md
 04-seo/seo-recommendations.md
 05-review/quality-review.md
@@ -159,7 +165,7 @@ Use when the user runs `/marketing campaign <brief>`.
 1. Generate a slug from the brief
 2. Create all output directories:
    ```bash
-   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,03-content/videos,04-seo,05-review,06-final}
+   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,03-content/videos,03-content/media,04-seo,05-review,06-final}
    ```
 3. Write the campaign brief to `00-brief/campaign-brief.md` with:
    - Original brief text
@@ -194,7 +200,7 @@ Spawn all 3 in a single message with multiple Task tool calls:
    - Success metrics and KPIs
 3. Write `02-strategy/target-audience.md` with detailed audience personas
 
-### Stage 4: Content + SEO + Video (PARALLEL - 3 agents)
+### Stage 4: Content + SEO + Video + Media (PARALLEL - 4 agents)
 
 **Agent D: Content Creation**
 - subagent_type: "content-marketer"
@@ -239,7 +245,26 @@ Spawn all 3 in a single message with multiple Task tool calls:
 
   Report the video file sizes when done."
 
-**Wait for all 3.**
+**Agent G: AI Media Production (Gemini)**
+- subagent_type: "gemini-media-producer"
+- model: sonnet
+- Prompt: "Generate professional marketing visual assets for this campaign: {brief}.
+
+  Read the marketing strategy at ./marketing-output/{slug}/02-strategy/marketing-strategy.md to understand the campaign positioning, brand tone, and key messages.
+
+  Create the following assets in ./marketing-output/{slug}/03-content/media/:
+  1. Hero banner image (1920x1080, 16:9) → hero-banner.png
+  2. Social media graphic (1080x1080, 1:1) → social-graphic.png
+  3. Blog header image (1920x1080, 16:9) → blog-header.png
+  4. Product teaser video (720p, 8 seconds) → product-teaser.mp4
+
+  Write your media-brief.json with detailed visual prompts that match the campaign's brand identity, then run the generation script.
+
+  The generation script and requirements are at: ~/.claude/plugins/local/marketing-pipeline/assets/gemini-media/
+
+  IMPORTANT: Requires GEMINI_API_KEY environment variable to be set."
+
+**Wait for all 4.**
 
 ### Stage 5: Review (PARALLEL - 2 agents)
 
