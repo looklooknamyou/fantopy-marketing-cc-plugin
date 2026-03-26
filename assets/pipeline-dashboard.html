@@ -1669,6 +1669,7 @@
     'business-analyst':     'Reviewing deliverable quality, strategy alignment, and identifying gaps',
     'sales-engineer':       'Assessing sales readiness, competitive positioning, and enablement gaps',
     'product-manager':      'Defining product positioning, feature priorities, and go-to-market strategy',
+    'video-producer':       'Generating motion graphics videos — product hero, social clips, and animated stats',
     'general-purpose':      'Synthesizing research into strategy documents and comprehensive reports'
   };
 
@@ -1691,6 +1692,7 @@
     'seo-specialist':       ['keyword', 'seo-'],
     'business-analyst':     ['quality-review', 'quality-assessment'],
     'sales-engineer':       ['sales-alignment', 'sales-review'],
+    'video-producer':       ['product-hero', 'social-clip', 'stats-video', '.mp4'],
     'general-purpose':      []
   };
 
@@ -1850,10 +1852,11 @@
                         : '[&nbsp;&nbsp;]';
         var badgeClass  = st === 'in-progress' ? 'in-progress' : st;
         var nameClass   = 'tree-file-name ' + st;
+        var fileIcon    = (d.name || '').match(/\.mp4$/i) ? '&#127916; ' : '';
 
         html += '<div class="tree-row">' +
           '<span class="tree-connector">' + connector + '</span>' +
-          '<span class="' + nameClass + '">' + esc(d.name) + '</span>' +
+          '<span class="' + nameClass + '">' + fileIcon + esc(d.name) + '</span>' +
           '<span class="tree-dots">............................................................</span>' +
           '<span class="tree-size">' + (d.size ? esc(d.size) : '') + '</span>' +
           '<span class="tree-badge ' + badgeClass + '">' + badgeLabel + '</span>' +

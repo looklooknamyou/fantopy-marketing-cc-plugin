@@ -70,7 +70,7 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
       ]
     },
     { "id": "strategy", "name": "Strategy", "status": "pending" },
-    { "id": "content", "name": "Content + SEO", "status": "pending" },
+    { "id": "content", "name": "Content + SEO + Video", "status": "pending" },
     { "id": "review", "name": "Review", "status": "pending" },
     { "id": "final", "name": "Final Report", "status": "pending" }
   ],
@@ -112,6 +112,7 @@ Spawn these using the Task tool with the matching `subagent_type`:
 | trend-analyst | Trend detection, forecasting, scenario planning, strategic foresight | haiku |
 | seo-specialist | Keyword research, on-page SEO, content optimization, technical SEO | haiku |
 | content-marketer | Content strategy, blog posts, social media, email campaigns, landing pages | haiku |
+| general-purpose (Video Producer) | Motion graphics videos using Remotion — product hero, social clips, stats animations | sonnet |
 | business-analyst | Requirements analysis, process optimization, ROI calculation, strategic planning | sonnet |
 | sales-engineer | Technical sales content, solution architecture, competitive positioning | sonnet |
 
@@ -131,6 +132,9 @@ README.md                           # Table of contents
 03-content/social-media/social-media-pack.md
 03-content/email-campaigns/email-sequence.md
 03-content/landing-pages/landing-page-copy.md
+03-content/videos/product-hero.mp4
+03-content/videos/social-clip.mp4
+03-content/videos/stats-video.mp4
 04-seo/keyword-research.md
 04-seo/seo-recommendations.md
 05-review/quality-review.md
@@ -155,7 +159,7 @@ Use when the user runs `/marketing campaign <brief>`.
 1. Generate a slug from the brief
 2. Create all output directories:
    ```bash
-   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,04-seo,05-review,06-final}
+   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,03-content/videos,04-seo,05-review,06-final}
    ```
 3. Write the campaign brief to `00-brief/campaign-brief.md` with:
    - Original brief text
@@ -190,7 +194,7 @@ Spawn all 3 in a single message with multiple Task tool calls:
    - Success metrics and KPIs
 3. Write `02-strategy/target-audience.md` with detailed audience personas
 
-### Stage 4: Content + SEO (PARALLEL - 2 agents)
+### Stage 4: Content + SEO + Video (PARALLEL - 3 agents)
 
 **Agent D: Content Creation**
 - subagent_type: "content-marketer"
@@ -200,15 +204,50 @@ Spawn all 3 in a single message with multiple Task tool calls:
 - subagent_type: "seo-specialist"
 - Prompt: "Conduct keyword research and SEO strategy for: {brief}. Strategy context: {summary of marketing-strategy.md}. (1) Keyword research with primary keywords, long-tail opportunities, search volumes, difficulty → ./marketing-output/{slug}/04-seo/keyword-research.md. (2) SEO recommendations: title tags, meta descriptions, heading structure, internal linking, content optimization → ./marketing-output/{slug}/04-seo/seo-recommendations.md"
 
-**Wait for both.**
+**Agent F: Video Production (Remotion)**
+- subagent_type: "general-purpose"
+- model: sonnet
+- Prompt: "You are a video production specialist. Create 3 marketing motion graphics videos using Remotion for this campaign: {brief}.
+
+  **Step 1**: Copy the Remotion template project:
+  ```bash
+  cp -r ~/.claude/plugins/local/marketing-pipeline/assets/remotion-template ./marketing-output/{slug}/03-content/videos/remotion-project
+  ```
+
+  **Step 2**: Read the marketing strategy at ./marketing-output/{slug}/02-strategy/marketing-strategy.md. Extract: product name, tagline/subtitle, top 3 features, key stats/numbers from research, brand colors (or choose professional colors that fit the campaign).
+
+  **Step 3**: Write ./marketing-output/{slug}/03-content/videos/remotion-project/props.json with campaign-specific content:
+  ```json
+  {
+    \"productHero\": { \"title\": \"...\", \"subtitle\": \"...\", \"features\": [...], \"ctaText\": \"...\", \"primaryColor\": \"#...\", \"accentColor\": \"#...\" },
+    \"socialClip\": { \"headline\": \"...\", \"points\": [...], \"ctaText\": \"...\", \"primaryColor\": \"#...\", \"accentColor\": \"#...\" },
+    \"statsVideo\": { \"title\": \"...\", \"stats\": [{\"label\": \"...\", \"value\": \"...\", \"numericValue\": N, \"unit\": \"...\"}], \"source\": \"...\", \"primaryColor\": \"#...\", \"accentColor\": \"#...\" }
+  }
+  ```
+
+  **Step 4**: Install dependencies and render:
+  ```bash
+  cd ./marketing-output/{slug}/03-content/videos/remotion-project && npm install && node render.mjs
+  ```
+
+  **Step 5**: Verify the 3 MP4 files exist in ./marketing-output/{slug}/03-content/videos/ (product-hero.mp4, social-clip.mp4, stats-video.mp4).
+
+  **Step 6**: Clean up the Remotion project folder:
+  ```bash
+  rm -rf ./marketing-output/{slug}/03-content/videos/remotion-project
+  ```
+
+  Report the video file sizes when done."
+
+**Wait for all 3.**
 
 ### Stage 5: Review (PARALLEL - 2 agents)
 
-**Agent F: Quality Review**
+**Agent G: Quality Review**
 - subagent_type: "business-analyst"
 - Prompt: "Review all marketing deliverables in ./marketing-output/{slug}/. Evaluate strategic alignment, message consistency, audience fit, completeness, ROI potential. Rate each deliverable 1-10. Write quality review with improvement recommendations to ./marketing-output/{slug}/05-review/quality-review.md"
 
-**Agent G: Sales Alignment**
+**Agent H: Sales Alignment**
 - subagent_type: "sales-engineer"
 - Prompt: "Review marketing deliverables in ./marketing-output/{slug}/ from a sales perspective. Evaluate technical accuracy, competitive positioning, objection handling, value prop clarity, sales team usability. Write review to ./marketing-output/{slug}/05-review/sales-alignment.md"
 

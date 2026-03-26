@@ -1,0 +1,24 @@
+{
+  "name": "marketing-video-generator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "node render.mjs",
+    "render:hero": "remotion render ProductHero ../product-hero.mp4",
+    "render:social": "remotion render SocialClip ../social-clip.mp4",
+    "render:stats": "remotion render StatsVideo ../stats-video.mp4"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.0",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.5.0"
+  }
+}

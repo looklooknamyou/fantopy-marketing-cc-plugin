@@ -1,6 +1,6 @@
 # Marketing Pipeline Plugin for Claude Code
 
-An autonomous multi-agent marketing pipeline that orchestrates 7+ specialized AI agents to produce complete marketing campaigns — from research through content creation, SEO optimization, and quality review — all from a single command.
+An autonomous multi-agent marketing pipeline that orchestrates 8+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, SEO optimization, and quality review — all from a single command.
 
 ## What It Does
 
@@ -8,16 +8,17 @@ You give it a campaign brief. It autonomously:
 
 1. **Researches** your market, competitors, and trends (3 agents in parallel)
 2. **Synthesizes** a marketing strategy with detailed buyer personas
-3. **Creates content** — blog posts, social media, email sequences, landing pages (2 agents in parallel)
-4. **Optimizes for SEO** — keyword research, on-page recommendations, link building strategy
-5. **Reviews everything** — quality assessment + sales alignment review (2 agents in parallel)
-6. **Compiles** an executive summary with prioritized action items
+3. **Creates content** — blog posts, social media, email sequences, landing pages (3 agents in parallel)
+4. **Produces videos** — product launch hero, social media clip, and animated stats video using [Remotion](https://github.com/remotion-dev/remotion)
+5. **Optimizes for SEO** — keyword research, on-page recommendations, link building strategy
+6. **Reviews everything** — quality assessment + sales alignment review (2 agents in parallel)
+7. **Compiles** an executive summary with prioritized action items
 
 All while showing real-time progress on a terminal-themed web dashboard.
 
 ## Output Example
 
-A single `/marketing campaign` run produces **14-16 deliverables** totaling **7,000-8,000+ lines** of content:
+A single `/marketing campaign` run produces **17-19 deliverables** — text content + motion graphics videos:
 
 ```
 marketing-output/your-campaign-slug/
@@ -33,7 +34,11 @@ marketing-output/your-campaign-slug/
 │   ├── blog-posts/                 (~170 lines)
 │   ├── social-media/               (~310 lines)
 │   ├── email-campaigns/            (~330 lines)
-│   └── landing-pages/              (~300 lines)
+│   ├── landing-pages/              (~300 lines)
+│   └── videos/
+│       ├── product-hero.mp4        (30s, 1920x1080)
+│       ├── social-clip.mp4         (15s, 1080x1080)
+│       └── stats-video.mp4         (20s, 1920x1080)
 ├── 04-seo/
 │   ├── keyword-research.md         (~580 lines)
 │   └── seo-recommendations.md      (~980 lines)
@@ -105,7 +110,7 @@ You should see the help text with available commands.
 
 | Command | Description | Agents | Stages |
 |---------|-------------|--------|--------|
-| `/marketing campaign <brief>` | Full-funnel campaign | 7 agents | 6 stages |
+| `/marketing campaign <brief>` | Full-funnel campaign | 8 agents | 6 stages |
 | `/marketing content <topic>` | Content production only | 4 agents | 5 stages |
 | `/marketing research <topic>` | Market intelligence only | 5 agents | 4 stages |
 | `/marketing status` | Check pipeline progress | — | — |
@@ -169,9 +174,10 @@ Stage 2: Research (PARALLEL)
 Stage 3: Strategy (SEQUENTIAL)
     └── Orchestrator synthesizes → marketing-strategy.md + target-audience.md
 
-Stage 4: Content + SEO (PARALLEL)
+Stage 4: Content + SEO + Video (PARALLEL)
     ├── Content Marketer ───────→ blog, social, email, landing page
-    └── SEO Specialist ─────────→ keyword-research.md + seo-recommendations.md
+    ├── SEO Specialist ─────────→ keyword-research.md + seo-recommendations.md
+    └── Video Producer ─────────→ product-hero.mp4, social-clip.mp4, stats-video.mp4
 
 Stage 5: Review (PARALLEL)
     ├── Business Analyst ───────→ quality-review.md
@@ -192,6 +198,7 @@ Agents within the same stage run **in parallel**. Stages run **sequentially** (e
 | Trend Analyst | trend-analyst | haiku | Macro trends, technology shifts |
 | Content Marketer | content-marketer | haiku | Blog, social, email, landing pages |
 | SEO Specialist | seo-specialist | haiku | Keywords, on-page SEO, link strategy |
+| Video Producer | general-purpose | sonnet | Motion graphics videos via Remotion (product hero, social clip, stats) |
 | Business Analyst | business-analyst | sonnet | Quality review, gap analysis |
 | Sales Engineer | sales-engineer | sonnet | Sales readiness, competitive positioning |
 | Orchestrator | marketing-orchestrator | opus | Coordinates all agents, synthesizes strategy |
@@ -229,13 +236,27 @@ marketing-pipeline/
 │   ├── marketing-research.md    # Market intelligence shortcut
 │   └── marketing-status.md      # Pipeline status checker
 └── assets/
-    └── pipeline-dashboard.html  # Real-time monitoring dashboard (1,900+ lines)
+    ├── pipeline-dashboard.html  # Real-time monitoring dashboard (1,900+ lines)
+    └── remotion-template/       # Video generation template project
+        ├── package.json
+        ├── tsconfig.json
+        ├── render.mjs           # Render script (bundles & renders all 3 videos)
+        └── src/
+            ├── index.ts
+            ├── Root.tsx         # 3 compositions: ProductHero, SocialClip, StatsVideo
+            ├── types.ts
+            └── components/
+                ├── ProductHero.tsx
+                ├── SocialClip.tsx
+                ├── StatsVideo.tsx
+                └── common/      # AnimatedText, ProgressBar, Background
 ```
 
 ## Requirements
 
 - **Claude Code** with plugin support
 - **Python 3** (for the dashboard HTTP server — pre-installed on macOS/Linux)
+- **Node.js 18+** (for Remotion video rendering)
 - **Subagent types** must be available: market-researcher, competitive-analyst, trend-analyst, content-marketer, seo-specialist, business-analyst, sales-engineer. These come from the [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) collection or can be custom `.md` files in `~/.claude/agents/`.
 
 ## How It Works Internally
@@ -273,7 +294,8 @@ Modify the output directory structure in `agents/marketing-orchestrator.md` unde
 ## Known Limitations
 
 - **Read-only agents**: Some subagent types (market-researcher, competitive-analyst, trend-analyst) may not have Write tool access. The orchestrator works around this by using `general-purpose` subagent type when file writing is required.
-- **Long-running**: A full-funnel campaign takes significant time due to the depth of content produced. Content + SEO stage is typically the longest.
+- **Long-running**: A full-funnel campaign takes significant time due to the depth of content produced. Content + SEO + Video stage is typically the longest.
+- **Video rendering**: Remotion requires Node.js 18+ and will auto-download Chromium on first run (~180MB). Video rendering is CPU-intensive and may take several minutes per video.
 - **Port 8847**: The dashboard uses a fixed port. If it's already in use, the server won't start.
 - **Single pipeline**: Only one pipeline can run at a time (due to the fixed dashboard port).
 
