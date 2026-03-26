@@ -18,8 +18,8 @@ SCOPES = [
 
 
 def get_sheet(sheet_id: str, worksheet_name: str = "Queue"):
-    creds_path = os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON", "")
-    if not creds_path:
+    creds_path = os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON", "").strip()
+    if not creds_path or creds_path.startswith("#"):
         raise RuntimeError("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON not set. See CREDENTIALS.md.")
     creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
     client = gspread.authorize(creds)

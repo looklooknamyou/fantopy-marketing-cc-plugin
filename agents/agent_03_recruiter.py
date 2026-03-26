@@ -48,9 +48,9 @@ log = logging.getLogger("agent_03_recruiter")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
-TWITTER_BEARER_TOKEN = os.environ["TWITTER_BEARER_TOKEN"]
-SHEET_ID = os.environ["RECRUITER_SHEET_ID"]
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN", "")
+SHEET_ID = os.environ.get("RECRUITER_SHEET_ID", "")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 DB_TABLE = "recruiter_prospects"
 
@@ -106,6 +106,9 @@ Output ONLY the message text — no subject line, no sign-off placeholder."""
 # ── Step 1: Discovery — GitHub ────────────────────────────────────────────────
 
 def search_github() -> list[dict]:
+    if not GITHUB_TOKEN:
+        log.warning("GITHUB_TOKEN not set — skipping GitHub search")
+        return []
     gh = Github(GITHUB_TOKEN)
     prospects = []
     seen_users = set()
@@ -159,6 +162,9 @@ def _get_readme(repo) -> str:
 # ── Step 1: Discovery — Twitter ───────────────────────────────────────────────
 
 def search_twitter() -> list[dict]:
+    if not TWITTER_BEARER_TOKEN:
+        log.warning("TWITTER_BEARER_TOKEN not set — skipping Twitter search")
+        return []
     client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN, wait_on_rate_limit=True)
     prospects = []
     seen_users = set()
@@ -306,6 +312,18 @@ def notify_discord(count: int) -> None:
 
 def run():
     log.info("=== Agent 3: The Recruiter — starting run ===")
+
+    missing = []
+    if not GITHUB_TOKEN:
+        missing.append("GITHUB_TOKEN")
+    if not TWITTER_BEARER_TOKEN:
+        missing.append("TWITTER_BEARER_TOKEN")
+    if not os.environ.get("ANTHROPIC_API_KEY", ""):
+        missing.append("ANTHROPIC_API_KEY")
+    if missing:
+        log.error(f"Missing credentials: {', '.join(missing)}. Set them in .env and re-run.")
+        return
+
     queued = 0
 
     # Ensure Sheets has header row

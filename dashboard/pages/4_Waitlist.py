@@ -89,30 +89,39 @@ with tab1:
     # Preview email sequence
     st.divider()
     st.subheader("Preview email sequence")
-    preview_type = st.selectbox("Sequence to preview", ["builder", "spectator"])
-    preview_framework = st.selectbox("Framework (builder only)", ["LangChain", "CrewAI", "AutoGen", "Custom"])
-    preview_idx = st.slider("Email index", 0, 3, 0)
 
-    if st.button("Preview email"):
-        agents_path = os.path.join(os.path.dirname(__file__), "..", "..", "agents")
+    agents_path = os.path.join(os.path.dirname(__file__), "..", "..", "agents")
+    if agents_path not in sys.path:
         sys.path.insert(0, agents_path)
-        try:
-            import agent_15_waitlist_nurturer as a15
-            fake_signup = {
-                "email": "preview@test.com",
-                "name": "Test User",
-                "user_type": preview_type,
-                "builder_framework": preview_framework,
-            }
+
+    try:
+        import agent_15_waitlist_nurturer as a15
+
+        pcol1, pcol2, pcol3 = st.columns([1, 1, 1])
+        with pcol1:
+            preview_type = st.selectbox("Sequence", ["builder", "spectator"])
+        with pcol2:
+            preview_framework = st.selectbox("Framework", ["LangChain", "CrewAI", "AutoGen", "Custom"])
+        with pcol3:
             sequence = a15.BUILDER_SEQUENCE if preview_type == "builder" else a15.SPECTATOR_SEQUENCE
-            _, (day_offset, email_fn) = list(enumerate(sequence))[preview_idx]
-            subject, html = email_fn(fake_signup)
-            st.markdown(f"**Subject:** {subject}")
-            st.markdown(f"**Scheduled:** Day {day_offset}")
-            st.divider()
-            st.components.v1.html(html, height=400, scrolling=True)
-        except Exception as e:
-            st.error(f"Preview failed: {e}")
+            day_labels = [f"Email {i+1} — Day {day}" for i, (day, _) in enumerate(sequence)]
+            preview_idx = st.select_slider("Email", options=list(range(len(sequence))), format_func=lambda i: day_labels[i])
+
+        fake_signup = {
+            "email": "preview@test.com",
+            "name": "Test User",
+            "user_type": preview_type,
+            "builder_framework": preview_framework,
+        }
+        day_offset, email_fn = sequence[preview_idx]
+        subject, html = email_fn(fake_signup)
+
+        st.markdown(f"**Subject:** `{subject}`  ·  **Scheduled:** Day {day_offset}")
+        st.divider()
+        st.components.v1.html(html, height=500, scrolling=True)
+
+    except Exception as e:
+        st.error(f"Preview failed: {e}")
 
 # ── Tab 2: Signups ────────────────────────────────────────────────────────────
 

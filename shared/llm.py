@@ -8,17 +8,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-if not _api_key:
-    raise RuntimeError("ANTHROPIC_API_KEY is not set. See CREDENTIALS.md.")
-client = anthropic.Anthropic(api_key=_api_key)
-
 MODEL = "claude-sonnet-4-6"
+
+_client: anthropic.Anthropic | None = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not set. See CREDENTIALS.md."
+            )
+        _client = anthropic.Anthropic(api_key=api_key)
+    return _client
 
 
 def ask(system: str, user: str, max_tokens: int = 1024) -> str:
     """Single-turn LLM call. Returns text response."""
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model=MODEL,
         max_tokens=max_tokens,
         system=system,
