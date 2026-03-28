@@ -1139,16 +1139,450 @@
     .term-elapsed { font-size: 22px; }
     .stage-pipeline { font-size: 10px; }
   }
+
+  /* ===================== CLOUD UI ===================== */
+  .cloud-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #020802;
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--green-subtle);
+    padding: 6px 18px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    gap: 12px;
+    animation: fade-in 0.4s ease-out;
+  }
+  .cloud-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cloud-icon { color: var(--cyan); font-size: 14px; }
+  .cloud-team { color: var(--green-dim); font-weight: 700; letter-spacing: 0.5px; }
+  .cloud-sep { color: #264a26; }
+  .cloud-user { color: var(--green-faint); }
+  .cloud-bar-center {
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+  }
+  .cloud-campaign-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid var(--green-subtle);
+    background: rgba(0,255,65,0.03);
+    color: var(--green-muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+  }
+  .cloud-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cloud-btn {
+    background: transparent;
+    border: 1px solid var(--green-subtle);
+    color: var(--green-faint);
+    padding: 3px 10px;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cloud-btn:hover {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 8px rgba(0,255,65,0.2);
+  }
+  .cloud-btn-active {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .cloud-btn-copied {
+    border-color: var(--green-bright) !important;
+    color: var(--green-bright) !important;
+  }
+
+  /* Campaign Browser Panel */
+  .campaign-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 90vw;
+    background: #020a02;
+    border-left: 2px solid var(--green-subtle);
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 30px rgba(0,0,0,0.6);
+  }
+  .campaign-panel.open {
+    transform: translateX(0);
+  }
+  .campaign-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .campaign-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .campaign-panel-list::-webkit-scrollbar { width: 4px; }
+  .campaign-panel-list::-webkit-scrollbar-track { background: transparent; }
+  .campaign-panel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .cp-card {
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .cp-card:hover {
+    border-color: var(--green-faint);
+    background: rgba(0,255,65,0.02);
+  }
+  .cp-card.active {
+    border-color: var(--green);
+    box-shadow: 0 0 10px var(--green-glow), inset 0 0 20px rgba(0,255,65,0.02);
+  }
+  .cp-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green-muted);
+    margin-bottom: 4px;
+  }
+  .cp-card.active .cp-card-name { color: var(--green); text-shadow: 0 0 8px rgba(0,255,65,0.3); }
+  .cp-card-slug {
+    font-size: 10px;
+    color: var(--green-faint);
+    margin-bottom: 8px;
+  }
+  .cp-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 10px;
+    flex-wrap: wrap;
+  }
+  .cp-card-meta .cp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border: 1px solid;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .cp-badge.running { border-color: var(--green); color: var(--green); }
+  .cp-badge.done    { border-color: var(--green-faint); color: var(--green-dim); }
+  .cp-badge.failed  { border-color: var(--red-dim); color: var(--red); }
+  .cp-badge.pending { border-color: #2a3a2a; color: #3a5a3a; }
+  .cp-meta-item { color: var(--green-faint); }
+  .cp-meta-item span { color: #2d5a2d; }
+
+  .campaign-panel-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    display: none;
+  }
+  .campaign-panel-overlay.visible { display: block; }
+
+  /* Cloud download links in deliverables */
+  .cloud-dl-link {
+    color: var(--green-muted);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--green-faint);
+    transition: all 0.2s;
+  }
+  .cloud-dl-link:hover {
+    color: var(--green);
+    border-bottom-color: var(--green);
+    text-shadow: 0 0 5px rgba(0,255,65,0.3);
+  }
+
+  /* Members Panel (left side) */
+  .members-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 420px;
+    max-width: 90vw;
+    background: #020a02;
+    border-right: 2px solid var(--green-subtle);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 30px rgba(0,0,0,0.6);
+  }
+  .members-panel.open { transform: translateX(0); }
+  .members-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+  .members-panel-body::-webkit-scrollbar { width: 4px; }
+  .members-panel-body::-webkit-scrollbar-track { background: transparent; }
+  .members-panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .members-panel-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    display: none;
+  }
+  .members-panel-overlay.visible { display: block; }
+
+  .mp-section {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mp-section:last-child { border-bottom: none; }
+  .mp-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    text-shadow: 0 0 8px rgba(0,255,65,0.5);
+    margin-bottom: 10px;
+  }
+  .mp-section-title span { color: var(--green-faint); font-weight: 400; letter-spacing: 1px; }
+  .mp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mp-input, .mp-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--green-muted);
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .mp-input:focus, .mp-select:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 6px rgba(0,255,65,0.15);
+  }
+  .mp-input::placeholder { color: #2d5a2d; }
+  .mp-select {
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23264a26'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .mp-select option { background: #0a0a0a; color: var(--green-muted); }
+  .mp-result {
+    margin-top: 8px;
+    font-size: 11px;
+    min-height: 0;
+    transition: all 0.2s;
+  }
+  .mp-result.success { color: var(--green-dim); }
+  .mp-result.error { color: var(--red); }
+  .mp-result-box {
+    background: var(--bg);
+    border: 1px solid var(--green-subtle);
+    padding: 8px 10px;
+    margin-top: 6px;
+    font-size: 11px;
+    word-break: break-all;
+    position: relative;
+  }
+  .mp-result-box .mp-copy-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: transparent;
+    border: 1px solid var(--green-subtle);
+    color: var(--green-faint);
+    padding: 2px 6px;
+    font-family: inherit;
+    font-size: 9px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .mp-result-box .mp-copy-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* Member row */
+  .member-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border3);
+    font-size: 12px;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--green-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green-dim);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .member-info { flex: 1; min-width: 0; }
+  .member-name { color: var(--green-muted); font-weight: 600; }
+  .member-email { color: var(--green-faint); font-size: 10px; }
+  .member-role {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .member-role.owner { border-color: var(--amber-dim); color: var(--amber); }
+  .member-role.admin { border-color: var(--cyan-dim); color: var(--cyan); }
+  .member-role.member { border-color: var(--green-faint); color: var(--green-dim); }
+  .member-role.viewer { border-color: #2d5a2d; color: var(--green-faint); }
+  .mp-remove-btn {
+    background: none;
+    border: 1px solid var(--red-dim);
+    color: var(--red-dim);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    font-family: inherit;
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .mp-remove-btn:hover { opacity: 1; color: var(--red); border-color: var(--red); }
+
+  @media (max-width: 600px) {
+    .cloud-bar { flex-wrap: wrap; gap: 6px; }
+    .cloud-bar-center { order: 3; flex-basis: 100%; }
+    .campaign-panel { width: 100%; max-width: 100%; }
+    .members-panel { width: 100%; max-width: 100%; }
+  }
 </style>
 </head>
 <body>
 <div class="container" id="app">
 
+  <!-- CLOUD BAR — shown in cloud mode -->
+  <div class="cloud-bar" id="cloud-bar" style="display:none">
+    <div class="cloud-bar-left">
+      <span class="cloud-icon">&#9729;</span>
+      <span class="cloud-team" id="cloud-team-name">loading...</span>
+      <span class="cloud-sep">|</span>
+      <span class="cloud-user" id="cloud-user-name">—</span>
+    </div>
+    <div class="cloud-bar-center">
+      <span class="cloud-campaign-badge" id="cloud-campaign-name">—</span>
+    </div>
+    <div class="cloud-bar-right">
+      <button class="cloud-btn" id="btn-team" onclick="toggleMembersPanel()">TEAM</button>
+      <button class="cloud-btn" id="btn-browse" onclick="toggleCampaignPanel()">CAMPAIGNS</button>
+      <button class="cloud-btn" id="btn-share" onclick="copyShareUrl()">SHARE URL</button>
+    </div>
+  </div>
+
+  <!-- CAMPAIGN BROWSER PANEL -->
+  <div class="campaign-panel" id="campaign-panel">
+    <div class="campaign-panel-header">
+      <span class="section-title" style="margin:0">TEAM CAMPAIGNS</span>
+      <button class="cloud-btn" onclick="toggleCampaignPanel()">&times; CLOSE</button>
+    </div>
+    <div class="campaign-panel-list" id="campaign-list">
+      <div style="color:#2d5a2d;font-size:12px;padding:20px;text-align:center;">Loading campaigns...</div>
+    </div>
+  </div>
+  <div class="campaign-panel-overlay" id="campaign-overlay" onclick="toggleCampaignPanel()"></div>
+
+  <!-- TEAM MEMBERS PANEL (left side) -->
+  <div class="members-panel" id="members-panel">
+    <div class="campaign-panel-header">
+      <span class="section-title" style="margin:0">TEAM MEMBERS</span>
+      <button class="cloud-btn" onclick="toggleMembersPanel()">&times; CLOSE</button>
+    </div>
+    <div class="members-panel-body" id="members-panel-body">
+      <div class="mp-section">
+        <div class="mp-section-title">ACTIVE MEMBERS <span id="member-count"></span></div>
+        <div id="members-list">
+          <div style="color:#2d5a2d;font-size:12px;">Loading members...</div>
+        </div>
+      </div>
+      <div class="mp-section">
+        <div class="mp-section-title">INVITE TO TEAM</div>
+        <div class="mp-form">
+          <input type="email" id="invite-email" placeholder="email@example.com" class="mp-input">
+          <select id="invite-role" class="mp-select">
+            <option value="member">member</option>
+            <option value="viewer">viewer</option>
+            <option value="admin">admin</option>
+          </select>
+          <button class="cloud-btn" onclick="inviteMember()">SEND INVITE</button>
+        </div>
+        <div id="invite-result" class="mp-result"></div>
+      </div>
+      <div class="mp-section">
+        <div class="mp-section-title">REGISTER NEW USER</div>
+        <div class="mp-form">
+          <input type="email" id="reg-email" placeholder="email@example.com" class="mp-input">
+          <input type="text" id="reg-name" placeholder="Display Name" class="mp-input">
+          <input type="password" id="reg-password" placeholder="Registration Password (not needed for admin)" class="mp-input" style="display:none">
+          <button class="cloud-btn" onclick="registerUser()">GENERATE API KEY</button>
+        </div>
+        <div id="reg-note" class="mp-result" style="color:var(--green-faint);font-size:10px;margin-top:4px;"></div>
+        <div id="reg-result" class="mp-result"></div>
+      </div>
+    </div>
+  </div>
+  <div class="members-panel-overlay" id="members-overlay" onclick="toggleMembersPanel()"></div>
+
   <!-- WAITING STATE -->
   <div class="waiting-state" id="waiting">
     <div class="waiting-spinner"></div>
     <h2>Awaiting Pipeline Data</h2>
-    <p>polling ./pipeline-status.json every 2.5s</p>
+    <p id="waiting-text">polling ./pipeline-status.json every 2.5s</p>
     <div class="waiting-cursor">
       <span style="color:var(--green-faint)">$</span>
       <span class="cursor-block"></span>
@@ -1977,7 +2411,7 @@
         durEl.textContent = formatDuration(totalMs);
         if (durSubEl) durSubEl.textContent = formatTimeStr(data.startTime) + ' \u2192 ' + formatTimeStr(data.endTime);
       } else if (data.startTime) {
-        durEl.textContent = '&mdash;';
+        durEl.textContent = '\u2014';
         if (durSubEl) durSubEl.textContent = 'started ' + formatTimeStr(data.startTime);
       } else {
         durEl.textContent = '—';
@@ -2019,7 +2453,8 @@
       if (status) { status.className = 'footer-conn-text complete'; status.textContent = '[COMPLETE] Pipeline finished'; }
     } else if (ok) {
       if (dot) { dot.className = 'footer-conn-dot live'; }
-      if (status) { status.className = 'footer-conn-text live'; status.textContent = '[LIVE] polling 2.5s'; }
+      var modeLabel = (typeof cloudMode !== 'undefined' && cloudMode) ? '[LIVE] supabase realtime' : '[LIVE] polling 2.5s';
+      if (status) { status.className = 'footer-conn-text live'; status.textContent = modeLabel; }
     } else {
       if (dot) { dot.className = 'footer-conn-dot off'; }
       if (status) { status.className = 'footer-conn-text off'; status.textContent = '[OFFLINE] retrying...'; }
@@ -2067,22 +2502,538 @@
   }
 
   /* ============================================================
-     POLLING
+     DATA SOURCE — CLOUD (SUPABASE REALTIME) OR LOCAL POLLING
   ============================================================ */
-  async function poll() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var cloudMode = urlParams.get('cloud') === '1';
+  var cloudCampaignId = urlParams.get('campaign_id');
+  var supabaseUrl = urlParams.get('supabase_url');
+  var supabaseKey = urlParams.get('supabase_key');
+  var cloudTeamId = urlParams.get('team_id');
+  var cloudApiKey = urlParams.get('api_key');
+  var cloudApiUrl = urlParams.get('api_url') || 'http://localhost:3847';
+
+  /* Cloud state */
+  var sb = null;
+  var cloudChannel = null;
+  var cloudCampaigns = [];
+  var cloudDeliverables = [];
+
+  if (cloudMode && cloudCampaignId && supabaseUrl && supabaseKey) {
+    /* ---------- CLOUD MODE: Supabase Realtime ---------- */
+    var waitText = document.getElementById('waiting-text');
+    if (waitText) waitText.textContent = 'connecting to supabase realtime...';
+
+    (function initCloud() {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      script.onload = function () {
+        var headers = {};
+        if (cloudApiKey) headers['x-api-key'] = cloudApiKey;
+        sb = window.supabase.createClient(supabaseUrl, supabaseKey, {
+          global: { headers: headers }
+        });
+
+        initCloudUI();
+        subscribeToCampaign(cloudCampaignId);
+        fetchCloudStatus();
+
+        /* Safety-net poll every 10s */
+        setInterval(fetchCloudStatus, 10000);
+      };
+      script.onerror = function () {
+        console.error('[cloud] Failed to load Supabase JS — falling back to local polling');
+        startLocalPolling();
+      };
+      document.head.appendChild(script);
+    })();
+  } else {
+    /* ---------- LOCAL MODE: poll pipeline-status.json ---------- */
+    startLocalPolling();
+  }
+
+  function startLocalPolling() {
+    async function poll() {
+      try {
+        var res = await fetch('./pipeline-status.json?t=' + Date.now());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        lastData = data;
+        updateDashboard(data);
+      } catch (e) {
+        setConnectionStatus(false, false);
+      }
+    }
+    poll();
+    setInterval(poll, 2500);
+  }
+
+  /* ============================================================
+     CLOUD UI FUNCTIONS
+  ============================================================ */
+
+  async function fetchCloudStatus() {
+    if (!sb || !cloudCampaignId) return;
     try {
-      var res = await fetch('./pipeline-status.json?t=' + Date.now());
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var data = await res.json();
-      lastData = data;
-      updateDashboard(data);
+      var resp = await sb.from('campaigns').select('id, name, slug, pipeline_status, status').eq('id', cloudCampaignId).single();
+      if (resp.error || !resp.data || !resp.data.pipeline_status) {
+        setConnectionStatus(false, false);
+        return;
+      }
+      lastData = resp.data.pipeline_status;
+
+      /* Update cloud campaign name in bar */
+      var nameEl = document.getElementById('cloud-campaign-name');
+      if (nameEl) nameEl.textContent = resp.data.name || resp.data.slug;
+
+      /* Fetch deliverables for download links */
+      var delResp = await sb.from('deliverables').select('id, name, path, storage_path, size_bytes, mime_type').eq('campaign_id', cloudCampaignId).order('created_at');
+      if (delResp.data) cloudDeliverables = delResp.data;
+
+      updateDashboard(lastData);
     } catch (e) {
       setConnectionStatus(false, false);
     }
   }
 
-  poll();
-  setInterval(poll, 2500);
+  function subscribeToCampaign(campaignId) {
+    if (!sb) return;
+
+    /* Unsubscribe old channel */
+    if (cloudChannel) {
+      sb.removeChannel(cloudChannel);
+      cloudChannel = null;
+    }
+
+    cloudChannel = sb.channel('campaign-' + campaignId)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'campaigns',
+        filter: 'id=eq.' + campaignId
+      }, function (payload) {
+        if (payload.new && payload.new.pipeline_status) {
+          lastData = payload.new.pipeline_status;
+          updateDashboard(lastData);
+        }
+      })
+      .subscribe();
+  }
+
+  async function initCloudUI() {
+    if (!sb) return;
+
+    /* Show cloud bar */
+    var bar = document.getElementById('cloud-bar');
+    if (bar) bar.style.display = 'flex';
+
+    /* Fetch user info */
+    if (cloudApiKey) {
+      try {
+        var userResp = await sb.from('users').select('display_name, email').single();
+        if (userResp.data) {
+          var userEl = document.getElementById('cloud-user-name');
+          if (userEl) userEl.textContent = userResp.data.display_name || userResp.data.email;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    /* Fetch team info */
+    if (cloudTeamId) {
+      try {
+        var teamResp = await sb.from('teams').select('name, slug').eq('id', cloudTeamId).single();
+        if (teamResp.data) {
+          var teamEl = document.getElementById('cloud-team-name');
+          if (teamEl) teamEl.textContent = teamResp.data.name;
+        }
+      } catch (e) { /* ignore */ }
+
+      /* Fetch team campaigns */
+      await refreshCampaignList();
+    }
+  }
+
+  async function refreshCampaignList() {
+    if (!sb || !cloudTeamId) return;
+
+    try {
+      var resp = await sb.from('campaigns')
+        .select('id, slug, name, mode, status, started_at, completed_at, created_at')
+        .eq('team_id', cloudTeamId)
+        .order('created_at', { ascending: false });
+      if (resp.data) {
+        cloudCampaigns = resp.data;
+        renderCampaignList();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function renderCampaignList() {
+    var listEl = document.getElementById('campaign-list');
+    if (!listEl) return;
+
+    if (!cloudCampaigns.length) {
+      listEl.innerHTML = '<div style="color:#2d5a2d;font-size:12px;padding:20px;text-align:center;">No campaigns found</div>';
+      return;
+    }
+
+    var html = '';
+    cloudCampaigns.forEach(function (c) {
+      var isActive = (c.id === cloudCampaignId);
+      var st = c.status || 'pending';
+      var started = c.started_at ? new Date(c.started_at).toLocaleDateString() + ' ' + new Date(c.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+      var dur = '';
+      if (c.started_at && c.completed_at) {
+        dur = formatDuration(new Date(c.completed_at).getTime() - new Date(c.started_at).getTime());
+      } else if (c.started_at && st === 'running') {
+        dur = formatDuration(Date.now() - new Date(c.started_at).getTime()) + '...';
+      }
+
+      html += '<div class="cp-card' + (isActive ? ' active' : '') + '" onclick="switchCampaign(\'' + c.id + '\')">' +
+        '<div class="cp-card-name">' + esc(c.name) + '</div>' +
+        '<div class="cp-card-slug">' + esc(c.slug) + '</div>' +
+        '<div class="cp-card-meta">' +
+          '<span class="cp-badge ' + st + '">' + esc(st.toUpperCase()) + '</span>' +
+          '<span class="cp-meta-item"><span>mode:</span> ' + esc((c.mode || '').replace(/-/g, ' ')) + '</span>' +
+          (dur ? '<span class="cp-meta-item"><span>dur:</span> ' + esc(dur) + '</span>' : '') +
+          '<span class="cp-meta-item"><span>started:</span> ' + esc(started) + '</span>' +
+        '</div>' +
+      '</div>';
+    });
+
+    listEl.innerHTML = html;
+  }
+
+  function switchCampaign(newId) {
+    if (newId === cloudCampaignId) return;
+
+    /* Reset state */
+    cloudCampaignId = newId;
+    pipelineStartTime = null;
+    pipelineEndTime = null;
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    isComplete = false;
+    confettiSpawned = false;
+    cloudDeliverables = [];
+
+    /* Update URL without reload */
+    var newUrl = new URL(window.location);
+    newUrl.searchParams.set('campaign_id', newId);
+    window.history.replaceState({}, '', newUrl);
+
+    /* Re-subscribe and fetch */
+    subscribeToCampaign(newId);
+    fetchCloudStatus();
+    renderCampaignList();
+
+    /* Close panel */
+    var panel = document.getElementById('campaign-panel');
+    var overlay = document.getElementById('campaign-overlay');
+    if (panel) panel.classList.remove('open');
+    if (overlay) overlay.classList.remove('visible');
+  }
+
+  /* ============================================================
+     CLOUD UI — PANEL & SHARE
+  ============================================================ */
+
+  function toggleCampaignPanel() {
+    var panel = document.getElementById('campaign-panel');
+    var overlay = document.getElementById('campaign-overlay');
+    if (!panel) return;
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      overlay.classList.remove('visible');
+    } else {
+      refreshCampaignList();
+      panel.classList.add('open');
+      overlay.classList.add('visible');
+    }
+  }
+
+  function copyShareUrl() {
+    var url = window.location.href;
+    navigator.clipboard.writeText(url).then(function () {
+      var btn = document.getElementById('btn-share');
+      if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = 'COPIED!';
+        btn.classList.add('cloud-btn-copied');
+        setTimeout(function () {
+          btn.textContent = orig;
+          btn.classList.remove('cloud-btn-copied');
+        }, 2000);
+      }
+    });
+  }
+
+  /* ============================================================
+     OVERRIDE DELIVERABLES RENDER FOR CLOUD DOWNLOAD LINKS
+  ============================================================ */
+  /* ============================================================
+     TEAM MEMBERS PANEL
+  ============================================================ */
+
+  function toggleMembersPanel() {
+    var panel = document.getElementById('members-panel');
+    var overlay = document.getElementById('members-overlay');
+    if (!panel) return;
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      overlay.classList.remove('visible');
+    } else {
+      fetchMembers();
+      panel.classList.add('open');
+      overlay.classList.add('visible');
+      // Show password field only for self-service (no API key)
+      var pwField = document.getElementById('reg-password');
+      var noteEl = document.getElementById('reg-note');
+      if (pwField) pwField.style.display = cloudApiKey ? 'none' : 'block';
+      if (noteEl) noteEl.textContent = cloudApiKey ? 'Admin mode: no password needed' : '';
+    }
+  }
+
+  async function fetchMembers() {
+    if (!sb || !cloudTeamId) return;
+    var listEl = document.getElementById('members-list');
+    var countEl = document.getElementById('member-count');
+    if (!listEl) return;
+
+    try {
+      var resp = await sb.from('team_members')
+        .select('role, joined_at, users(id, email, display_name)')
+        .eq('team_id', cloudTeamId);
+
+      if (resp.error || !resp.data) {
+        listEl.innerHTML = '<div style="color:var(--red-dim);font-size:11px;">Failed to load members</div>';
+        return;
+      }
+
+      var members = resp.data;
+      if (countEl) countEl.textContent = '(' + members.length + ')';
+
+      if (!members.length) {
+        listEl.innerHTML = '<div style="color:#2d5a2d;font-size:12px;">No members found</div>';
+        return;
+      }
+
+      /* Sort: owner first, then admin, member, viewer */
+      var roleOrder = { owner: 0, admin: 1, member: 2, viewer: 3 };
+      members.sort(function (a, b) {
+        return (roleOrder[a.role] || 9) - (roleOrder[b.role] || 9);
+      });
+
+      var html = '';
+      members.forEach(function (m) {
+        var user = m.users || {};
+        var name = user.display_name || user.email || 'Unknown';
+        var email = user.email || '';
+        var initials = name.split(' ').map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+        var joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString() : '';
+
+        var removeBtn = m.role !== 'owner'
+          ? '<button class="mp-remove-btn" onclick="removeMember(\'' + esc(user.id) + '\', \'' + esc(name) + '\')" title="Remove member">&times;</button>'
+          : '';
+        html += '<div class="member-row">' +
+          '<div class="member-avatar">' + esc(initials) + '</div>' +
+          '<div class="member-info">' +
+            '<div class="member-name">' + esc(name) + '</div>' +
+            '<div class="member-email">' + esc(email) + (joined ? ' &middot; joined ' + esc(joined) : '') + '</div>' +
+          '</div>' +
+          '<span class="member-role ' + esc(m.role) + '">' + esc(m.role) + '</span>' +
+          removeBtn +
+        '</div>';
+      });
+
+      listEl.innerHTML = html;
+    } catch (e) {
+      listEl.innerHTML = '<div style="color:var(--red-dim);font-size:11px;">Error: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  async function inviteMember() {
+    var emailEl = document.getElementById('invite-email');
+    var roleEl = document.getElementById('invite-role');
+    var resultEl = document.getElementById('invite-result');
+    if (!emailEl || !resultEl) return;
+
+    var email = emailEl.value.trim();
+    var role = roleEl ? roleEl.value : 'member';
+    if (!email) {
+      resultEl.className = 'mp-result error';
+      resultEl.textContent = 'Email required';
+      return;
+    }
+
+    resultEl.className = 'mp-result';
+    resultEl.textContent = 'Sending invite...';
+
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/teams/' + cloudTeamId + '/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': cloudApiKey },
+        body: JSON.stringify({ email: email, role: role })
+      });
+      var data = await resp.json();
+
+      if (!resp.ok) {
+        resultEl.className = 'mp-result error';
+        resultEl.textContent = data.error || 'Invite failed';
+        return;
+      }
+
+      emailEl.value = '';
+      resultEl.className = 'mp-result success';
+      resultEl.innerHTML = 'Invite sent! Token:' +
+        '<div class="mp-result-box">' +
+          '<span id="invite-token-text">' + esc(data.invitation.token) + '</span>' +
+          '<button class="mp-copy-btn" onclick="copyText(\'' + esc(data.invitation.token) + '\', this)">COPY</button>' +
+        '</div>' +
+        '<div style="margin-top:6px;color:var(--green-faint);font-size:10px;">Join command: <span style="color:var(--green-muted)">' + esc(data.join_command) + '</span></div>';
+    } catch (e) {
+      resultEl.className = 'mp-result error';
+      resultEl.textContent = 'Network error: ' + e.message;
+    }
+  }
+
+  async function registerUser() {
+    var emailEl = document.getElementById('reg-email');
+    var nameEl = document.getElementById('reg-name');
+    var passwordEl = document.getElementById('reg-password');
+    var resultEl = document.getElementById('reg-result');
+    if (!emailEl || !nameEl || !resultEl) return;
+
+    var email = emailEl.value.trim();
+    var displayName = nameEl.value.trim();
+    if (!email || !displayName) {
+      resultEl.className = 'mp-result error';
+      resultEl.textContent = 'Email and display name required';
+      return;
+    }
+
+    var headers = { 'Content-Type': 'application/json' };
+    var body = { email: email, display_name: displayName };
+
+    if (cloudApiKey) {
+      // Admin mode: send API key header, no password needed
+      headers['x-api-key'] = cloudApiKey;
+    } else {
+      // Self-service mode: password required
+      var password = passwordEl ? passwordEl.value : '';
+      if (!password) {
+        resultEl.className = 'mp-result error';
+        resultEl.textContent = 'Registration password required';
+        return;
+      }
+      body.password = password;
+    }
+
+    resultEl.className = 'mp-result';
+    resultEl.textContent = 'Registering user...';
+
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/auth/register', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+      var data = await resp.json();
+
+      if (!resp.ok) {
+        resultEl.className = 'mp-result error';
+        resultEl.textContent = data.error || 'Registration failed';
+        return;
+      }
+
+      emailEl.value = '';
+      nameEl.value = '';
+      if (passwordEl) passwordEl.value = '';
+      resultEl.className = 'mp-result success';
+      resultEl.innerHTML = 'User registered: <strong>' + esc(data.user.display_name) + '</strong>' +
+        '<div class="mp-result-box">' +
+          '<div style="color:#2d5a2d;font-size:9px;letter-spacing:1px;margin-bottom:4px;">API KEY</div>' +
+          '<span style="color:var(--green)">' + esc(data.api_key) + '</span>' +
+          '<button class="mp-copy-btn" onclick="copyText(\'' + esc(data.api_key) + '\', this)">COPY</button>' +
+        '</div>' +
+        '<div style="margin-top:6px;color:var(--amber-dim);font-size:10px;">Note: User must be invited to join this team separately.</div>';
+    } catch (e) {
+      resultEl.className = 'mp-result error';
+      resultEl.textContent = 'Network error: ' + e.message;
+    }
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(function () {
+      if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = 'COPIED!';
+        btn.style.color = 'var(--green-bright)';
+        btn.style.borderColor = 'var(--green-bright)';
+        setTimeout(function () {
+          btn.textContent = orig;
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 2000);
+      }
+    });
+  }
+
+  async function removeMember(userId, name) {
+    if (!confirm('Remove ' + name + ' from team?')) return;
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/teams/' + cloudTeamId + '/members/' + userId, {
+        method: 'DELETE',
+        headers: { 'x-api-key': cloudApiKey }
+      });
+      var data = await resp.json();
+      if (!resp.ok) {
+        alert(data.error || 'Failed to remove member');
+        return;
+      }
+      fetchMembers();
+    } catch (e) {
+      alert('Network error: ' + e.message);
+    }
+  }
+
+  /* Expose cloud functions to global scope for onclick handlers */
+  window.toggleCampaignPanel = toggleCampaignPanel;
+  window.copyShareUrl = copyShareUrl;
+  window.switchCampaign = switchCampaign;
+  window.toggleMembersPanel = toggleMembersPanel;
+  window.inviteMember = inviteMember;
+  window.registerUser = registerUser;
+  window.copyText = copyText;
+  window.removeMember = removeMember;
+
+  var _origRenderDeliverables = renderDeliverables;
+  renderDeliverables = function (data) {
+    _origRenderDeliverables(data);
+
+    /* In cloud mode, add download links */
+    if (!cloudMode || !cloudDeliverables.length) return;
+
+    var fileNames = document.querySelectorAll('.tree-file-name.done');
+    fileNames.forEach(function (el) {
+      var text = el.textContent.replace(/^[\u{1F3AC}\u{1F4F7}]\s*/u, '').trim();
+      var match = cloudDeliverables.find(function (d) {
+        return d.name === text || (d.path && d.path.endsWith(text));
+      });
+      if (match && match.storage_path) {
+        var downloadUrl = supabaseUrl + '/storage/v1/object/campaign-deliverables/' + encodeURIComponent(match.storage_path);
+        var link = document.createElement('a');
+        link.href = downloadUrl;
+        link.className = 'cloud-dl-link';
+        link.target = '_blank';
+        link.title = 'Download from cloud';
+        link.textContent = el.textContent;
+        el.textContent = '';
+        el.appendChild(link);
+      }
+    });
+  };
 
 })();
 </script>

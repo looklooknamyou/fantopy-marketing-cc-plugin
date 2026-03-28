@@ -356,6 +356,92 @@ When pipeline completes, print:
 - [2-3 actionable next steps]
 ```
 
+## CLOUD SYNC (OPT-IN)
+
+The pipeline supports optional cloud sync via Supabase. When enabled, campaign state and deliverables are uploaded so team members can view progress remotely.
+
+**Cloud sync is fire-and-forget** — failures never break the pipeline. Wrap all cloud calls in try/catch and continue on error.
+
+### Detecting Cloud Mode
+
+At the start of the pipeline (Setup stage), check if cloud is available:
+
+```javascript
+// Run via Bash: node -e "..."
+const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
+(async () => {
+  const ok = await cloud.init();
+  if (ok) {
+    const teamId = cloud.getActiveTeamId();
+    const id = await cloud.createCampaign(teamId, '{slug}', '{campaign-name}', '{mode}');
+    console.log('CLOUD_CAMPAIGN_ID=' + (id || ''));
+  } else {
+    console.log('CLOUD_CAMPAIGN_ID=');
+  }
+})();
+```
+
+Capture the output `CLOUD_CAMPAIGN_ID`. If empty, cloud is disabled — skip all cloud steps below.
+
+### After Each pipeline-status.json Write
+
+If `CLOUD_CAMPAIGN_ID` is set, sync the status:
+
+```javascript
+const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
+(async () => {
+  await cloud.init();
+  await cloud.syncStatus('{CLOUD_CAMPAIGN_ID}', './marketing-output/{slug}/pipeline-status.json');
+})();
+```
+
+### After Each Deliverable Is Created
+
+Upload the file to cloud storage:
+
+```javascript
+const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
+(async () => {
+  await cloud.init();
+  await cloud.uploadDeliverable('{CLOUD_CAMPAIGN_ID}', './marketing-output/{slug}/{relative-path}', '{relative-path}');
+})();
+```
+
+### Dashboard URL With Cloud Params
+
+When cloud is active, open the dashboard with cloud query params so it uses Supabase Realtime and shows the cloud UI (team bar, campaign browser, download links):
+
+```bash
+open "http://localhost:8847/pipeline-dashboard.html?cloud=1&campaign_id={CLOUD_CAMPAIGN_ID}&supabase_url={SUPABASE_URL}&supabase_key={SUPABASE_ANON_KEY}&team_id={TEAM_ID}&api_key={API_KEY}&api_url=http://localhost:3847"
+```
+
+Read the Supabase URL, anon key, team ID, and API key from the SDK config and env:
+
+```javascript
+const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
+(async () => {
+  await cloud.init();
+  const cfg = cloud.getConfig();
+  console.log(JSON.stringify({
+    url: cfg.supabase_url,
+    key: cfg.supabase_anon_key,
+    team_id: cfg.active_team_id,
+    api_key: process.env.MARKETING_CLOUD_API_KEY
+  }));
+})();
+```
+
+### Summary of Cloud Touchpoints
+
+| When | Action |
+|------|--------|
+| Pipeline start (Setup) | `cloud.init()` → `cloud.createCampaign()` → capture campaign ID |
+| Each `pipeline-status.json` write | `cloud.syncStatus(campaignId, statusFilePath)` |
+| Each deliverable file created | `cloud.uploadDeliverable(campaignId, localPath, relativePath)` |
+| Dashboard open | Append `?cloud=1&campaign_id=...&supabase_url=...&supabase_key=...` |
+
+---
+
 ## ERROR HANDLING
 
 - **Agent spawn failure**: Log error, skip that task, continue. Note gap in final summary.

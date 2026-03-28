@@ -1,0 +1,9 @@
+{
+  "name": "marketing-pipeline-cloud-sdk",
+  "version": "1.0.0",
+  "description": "Client SDK for syncing Marketing Pipeline to cloud",
+  "main": "index.js",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

@@ -1,0 +1,4 @@
+node_modules/
+cloud/self-hosted/supabase/
+.env
+*.log
