@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const authRoutes = require('./routes/auth');
 const teamsRoutes = require('./routes/teams');
 const campaignsRoutes = require('./routes/campaigns');
+const distributionRoutes = require('./routes/distribution');
 
 const app = express();
 const PORT = process.env.PORT || 3847;
@@ -48,6 +49,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/campaigns', campaignsRoutes);
+app.use('/api/distribution', distributionRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'marketing-pipeline-cloud' });

@@ -54,7 +54,7 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
   "slug": "campaign-slug",
   "startTime": "2026-03-25T10:30:00Z",
   "status": "running",
-  "progress": { "current": 2, "total": 6 },
+  "progress": { "current": 2, "total": 7 },
   "stages": [
     {
       "id": "setup", "name": "Setup", "status": "done",
@@ -72,7 +72,8 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
     { "id": "strategy", "name": "Strategy", "status": "pending" },
     { "id": "content", "name": "Content + SEO + Video + Media", "status": "pending" },
     { "id": "review", "name": "Review", "status": "pending" },
-    { "id": "final", "name": "Final Report", "status": "pending" }
+    { "id": "final", "name": "Final Report", "status": "pending" },
+    { "id": "distribution", "name": "Distribution", "status": "pending" }
   ],
   "deliverables": [
     { "name": "competitive-intelligence.md", "path": "01-research/competitive-intelligence.md", "size": "3.8 KB", "status": "done" }
@@ -86,12 +87,12 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
 ```
 
 **Use ISO 8601 timestamps** for startTime/endTime. Use "HH:MM:SS" for activity times.
-**Stages for full-funnel**: setup, research, strategy, content, review, final (total: 6)
+**Stages for full-funnel**: setup, research, strategy, content, review, final, distribution (total: 7)
 **Stages for content-production**: setup, research, content, seo-review, final (total: 5)
 **Stages for market-intelligence**: setup, research, synthesis, final (total: 4)
 
 ### At Pipeline End
-After writing the final executive summary:
+After Stage 7 (Distribution) completes — or after Stage 6 if distribution is skipped:
 
 ```bash
 # Stop the HTTP server
@@ -117,6 +118,7 @@ Spawn these using the Task tool with the matching `subagent_type`:
 | web-scraper | Web scraping, structured data extraction, JS-rendered pages (Playwright/BeautifulSoup) | sonnet |
 | business-analyst | Requirements analysis, process optimization, ROI calculation, strategic planning | sonnet |
 | sales-engineer | Technical sales content, solution architecture, competitive positioning | sonnet |
+| distribution-agent | Automated content distribution to Reddit, Twitter/X, Telegram, Discord | sonnet |
 
 ## OUTPUT DIRECTORY STRUCTURE
 
@@ -146,6 +148,8 @@ README.md                           # Table of contents
 05-review/quality-review.md
 05-review/sales-alignment.md
 06-final/executive-summary.md
+07-distribution/distribution-brief.json
+07-distribution/distribution-report.md
 ```
 
 Only create directories relevant to the pipeline mode.
@@ -165,7 +169,7 @@ Use when the user runs `/marketing campaign <brief>`.
 1. Generate a slug from the brief
 2. Create all output directories:
    ```bash
-   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,03-content/videos,03-content/media,04-seo,05-review,06-final}
+   mkdir -p ./marketing-output/{slug}/{00-brief,01-research,02-strategy,03-content/blog-posts,03-content/social-media,03-content/email-campaigns,03-content/landing-pages,03-content/videos,03-content/media,04-seo,05-review,06-final,07-distribution}
    ```
 3. Write the campaign brief to `00-brief/campaign-brief.md` with:
    - Original brief text
@@ -285,6 +289,48 @@ Spawn all 3 in a single message with multiple Task tool calls:
    - Content deliverables produced, SEO strategy, review scores
    - Recommended next steps
 3. Write `README.md` as table of contents linking all deliverables
+4. **Do NOT stop the HTTP server or write final pipeline-status.json yet** — Stage 7 may follow.
+
+### Stage 7: Distribution (CONDITIONAL - 1 agent)
+
+This stage is **optional**. It only runs if the user has configured distribution platforms.
+
+**Pre-check**: Before spawning the agent, check if the config exists:
+
+```bash
+test -f ~/.marketing-pipeline/distribution.json && echo "DISTRIBUTION_CONFIGURED=true" || echo "DISTRIBUTION_CONFIGURED=false"
+```
+
+**If `DISTRIBUTION_CONFIGURED=false`**:
+- Log activity: "Distribution skipped — no platforms configured. Run /marketing distribution setup to enable."
+- Mark the distribution stage as "skipped" in pipeline-status.json
+- Proceed to pipeline finalization (stop server, write final status, print completion report)
+
+**If `DISTRIBUTION_CONFIGURED=true`**:
+- Mark distribution stage as "running" in pipeline-status.json
+- Spawn the distribution agent:
+
+**Agent I: Content Distribution**
+- subagent_type: "distribution-agent"
+- model: sonnet
+- Prompt: "Distribute the completed campaign deliverables to configured platforms.
+
+  **Campaign output directory**: ./marketing-output/{slug}/
+  **Plugin assets directory**: ~/.claude/plugins/local/marketing-pipeline
+
+  Read the campaign deliverables (strategy, blog posts, social media pack, executive summary, media files), load distribution credentials from ~/.marketing-pipeline/distribution.json, adapt content per platform (Reddit, Twitter/X, Telegram, Discord), write the distribution-brief.json, copy and run the distribute.js helper script, then write the distribution report.
+
+  All output goes to ./marketing-output/{slug}/07-distribution/"
+
+**After distribution agent completes**:
+1. Read `07-distribution/distribution-report.md` and append a distribution summary to `README.md`
+2. Mark distribution stage as "done" in pipeline-status.json
+3. Log distribution results in activities
+
+**Pipeline finalization** (runs after Stage 7, or after Stage 6 if distribution was skipped):
+1. Write final pipeline-status.json with status "done" and all stages marked "done"
+2. Wait 2 seconds so the dashboard can poll the final state
+3. Stop the HTTP server
 4. Print completion report (see Reporting Format below)
 
 ---
@@ -348,6 +394,12 @@ When pipeline completes, print:
 - [x] Market Analysis (01-research/market-analysis.md)
 - [x] Competitive Intelligence (01-research/competitive-intelligence.md)
 ...list all produced files...
+
+### Distribution (if applicable)
+- [x/skipped] Reddit: {status and URL if posted}
+- [x/skipped] Twitter/X: {status and URL if posted}
+- [x/skipped] Telegram: {status}
+- [x/skipped] Discord: {status}
 
 ### Key Insights
 - [3-5 bullet points of the most important findings]

@@ -1315,6 +1315,143 @@
   }
   .campaign-panel-overlay.visible { display: block; }
 
+  /* Distribution Config Panel (right side) */
+  .dist-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 460px;
+    max-width: 92vw;
+    background: #020a02;
+    border-left: 2px solid var(--green-subtle);
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 30px rgba(0,0,0,0.6);
+  }
+  .dist-panel.open { transform: translateX(0); }
+  .dist-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+  .dist-panel-body::-webkit-scrollbar { width: 4px; }
+  .dist-panel-body::-webkit-scrollbar-track { background: transparent; }
+  .dist-panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .dist-panel-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    display: none;
+  }
+  .dist-panel-overlay.visible { display: block; }
+
+  .dist-platform {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+  }
+  .dist-platform:last-child { border-bottom: none; }
+  .dist-platform-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .dist-platform-header:hover .dist-platform-name { color: var(--green); }
+  .dist-platform-name {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--green-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dist-platform-icon {
+    width: 18px;
+    text-align: center;
+    font-size: 14px;
+  }
+  .dist-status-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border: 1px solid;
+    text-transform: uppercase;
+  }
+  .dist-status-badge.connected { border-color: var(--green); color: var(--green); }
+  .dist-status-badge.not-configured { border-color: #3a3a2a; color: #5a5a3a; }
+  .dist-status-badge.testing { border-color: var(--amber); color: var(--amber); }
+  .dist-status-badge.failed { border-color: var(--red); color: var(--red); }
+
+  .dist-fields {
+    display: none;
+  }
+  .dist-fields.expanded { display: block; }
+  .dist-field {
+    margin-bottom: 8px;
+  }
+  .dist-field label {
+    display: block;
+    font-size: 10px;
+    color: var(--green-faint);
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .dist-field input, .dist-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--green-muted);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 11px;
+    box-sizing: border-box;
+  }
+  .dist-field input:focus {
+    border-color: var(--green);
+    outline: none;
+    box-shadow: 0 0 6px rgba(0,255,65,0.15);
+  }
+  .dist-field input[type="password"] { letter-spacing: 2px; }
+  .dist-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    align-items: center;
+  }
+  .dist-actions .cloud-btn { font-size: 10px; padding: 4px 10px; }
+  .dist-toggle-enabled {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--green-faint);
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .dist-toggle-enabled input[type="checkbox"] {
+    accent-color: var(--green);
+    width: 12px;
+    height: 12px;
+  }
+  .dist-test-result {
+    font-size: 10px;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-left: 2px solid var(--border);
+    color: var(--green-faint);
+  }
+  .dist-test-result.success { border-left-color: var(--green); color: var(--green-dim); }
+  .dist-test-result.error { border-left-color: var(--red); color: var(--red); }
+
   /* Cloud download links in deliverables */
   .cloud-dl-link {
     color: var(--green-muted);
@@ -1521,6 +1658,7 @@
     <div class="cloud-bar-right">
       <button class="cloud-btn" id="btn-team" onclick="toggleMembersPanel()">TEAM</button>
       <button class="cloud-btn" id="btn-browse" onclick="toggleCampaignPanel()">CAMPAIGNS</button>
+      <button class="cloud-btn" id="btn-dist" onclick="window.toggleDistPanel()">DISTRIBUTION</button>
       <button class="cloud-btn" id="btn-share" onclick="copyShareUrl()">SHARE URL</button>
     </div>
   </div>
@@ -1577,6 +1715,103 @@
     </div>
   </div>
   <div class="members-panel-overlay" id="members-overlay" onclick="toggleMembersPanel()"></div>
+
+  <!-- DISTRIBUTION CONFIG PANEL (right side) -->
+  <div class="dist-panel" id="dist-panel">
+    <div class="campaign-panel-header">
+      <span class="section-title" style="margin:0">DISTRIBUTION CHANNELS</span>
+      <button class="cloud-btn" onclick="window.toggleDistPanel()">&times; CLOSE</button>
+    </div>
+    <div class="dist-panel-body" id="dist-panel-body">
+
+      <!-- REDDIT -->
+      <div class="dist-platform" data-platform="reddit">
+        <div class="dist-platform-header" onclick="window.toggleDistFields('reddit')">
+          <span class="dist-platform-name">
+            <span class="dist-platform-icon">&#9679;</span> REDDIT
+          </span>
+          <span class="dist-status-badge not-configured" id="dist-status-reddit">NOT SET</span>
+        </div>
+        <div class="dist-fields" id="dist-fields-reddit">
+          <div class="dist-field"><label>CLIENT ID</label><input type="text" id="dist-reddit-client_id" placeholder="From reddit.com/prefs/apps"></div>
+          <div class="dist-field"><label>CLIENT SECRET</label><input type="password" id="dist-reddit-client_secret" placeholder="App secret"></div>
+          <div class="dist-field"><label>USERNAME</label><input type="text" id="dist-reddit-username" placeholder="Reddit username"></div>
+          <div class="dist-field"><label>PASSWORD</label><input type="password" id="dist-reddit-password" placeholder="Reddit password"></div>
+          <div class="dist-field"><label>USER AGENT</label><input type="text" id="dist-reddit-user_agent" placeholder="MarketingPipeline/1.0 by u/username"></div>
+          <div class="dist-field"><label>DEFAULT SUBREDDIT</label><input type="text" id="dist-reddit-default_subreddit" placeholder="e.g. marketing, SaaS, startups"></div>
+          <div class="dist-actions">
+            <button class="cloud-btn" onclick="window.saveDistPlatform('reddit')">SAVE</button>
+            <button class="cloud-btn" onclick="window.testDistPlatform('reddit')">TEST</button>
+            <label class="dist-toggle-enabled"><input type="checkbox" id="dist-reddit-enabled" checked> Enabled</label>
+          </div>
+          <div class="dist-test-result" id="dist-result-reddit" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- TWITTER/X -->
+      <div class="dist-platform" data-platform="twitter">
+        <div class="dist-platform-header" onclick="window.toggleDistFields('twitter')">
+          <span class="dist-platform-name">
+            <span class="dist-platform-icon">&#10005;</span> TWITTER / X
+          </span>
+          <span class="dist-status-badge not-configured" id="dist-status-twitter">NOT SET</span>
+        </div>
+        <div class="dist-fields" id="dist-fields-twitter">
+          <div class="dist-field"><label>API KEY (Consumer Key)</label><input type="text" id="dist-twitter-api_key" placeholder="From developer.twitter.com"></div>
+          <div class="dist-field"><label>API SECRET (Consumer Secret)</label><input type="password" id="dist-twitter-api_secret" placeholder="Consumer secret"></div>
+          <div class="dist-field"><label>ACCESS TOKEN</label><input type="text" id="dist-twitter-access_token" placeholder="User access token"></div>
+          <div class="dist-field"><label>ACCESS TOKEN SECRET</label><input type="password" id="dist-twitter-access_token_secret" placeholder="User token secret"></div>
+          <div class="dist-actions">
+            <button class="cloud-btn" onclick="window.saveDistPlatform('twitter')">SAVE</button>
+            <button class="cloud-btn" onclick="window.testDistPlatform('twitter')">TEST</button>
+            <label class="dist-toggle-enabled"><input type="checkbox" id="dist-twitter-enabled" checked> Enabled</label>
+          </div>
+          <div class="dist-test-result" id="dist-result-twitter" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- TELEGRAM -->
+      <div class="dist-platform" data-platform="telegram">
+        <div class="dist-platform-header" onclick="window.toggleDistFields('telegram')">
+          <span class="dist-platform-name">
+            <span class="dist-platform-icon">&#9993;</span> TELEGRAM
+          </span>
+          <span class="dist-status-badge not-configured" id="dist-status-telegram">NOT SET</span>
+        </div>
+        <div class="dist-fields" id="dist-fields-telegram">
+          <div class="dist-field"><label>BOT TOKEN</label><input type="password" id="dist-telegram-bot_token" placeholder="From @BotFather /newbot"></div>
+          <div class="dist-field"><label>CHAT ID</label><input type="text" id="dist-telegram-chat_id" placeholder="@channelname or numeric group ID"></div>
+          <div class="dist-actions">
+            <button class="cloud-btn" onclick="window.saveDistPlatform('telegram')">SAVE</button>
+            <button class="cloud-btn" onclick="window.testDistPlatform('telegram')">TEST</button>
+            <label class="dist-toggle-enabled"><input type="checkbox" id="dist-telegram-enabled" checked> Enabled</label>
+          </div>
+          <div class="dist-test-result" id="dist-result-telegram" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- DISCORD -->
+      <div class="dist-platform" data-platform="discord">
+        <div class="dist-platform-header" onclick="window.toggleDistFields('discord')">
+          <span class="dist-platform-name">
+            <span class="dist-platform-icon">&#9783;</span> DISCORD
+          </span>
+          <span class="dist-status-badge not-configured" id="dist-status-discord">NOT SET</span>
+        </div>
+        <div class="dist-fields" id="dist-fields-discord">
+          <div class="dist-field"><label>WEBHOOK URL</label><input type="text" id="dist-discord-webhook_url" placeholder="From channel Settings > Integrations > Webhooks"></div>
+          <div class="dist-actions">
+            <button class="cloud-btn" onclick="window.saveDistPlatform('discord')">SAVE</button>
+            <button class="cloud-btn" onclick="window.testDistPlatform('discord')">TEST</button>
+            <label class="dist-toggle-enabled"><input type="checkbox" id="dist-discord-enabled" checked> Enabled</label>
+          </div>
+          <div class="dist-test-result" id="dist-result-discord" style="display:none"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="dist-panel-overlay" id="dist-overlay" onclick="window.toggleDistPanel()"></div>
 
   <!-- WAITING STATE -->
   <div class="waiting-state" id="waiting">
@@ -2105,7 +2340,8 @@
     'product-manager':      'Defining product positioning, feature priorities, and go-to-market strategy',
     'video-producer':       'Generating motion graphics videos — product hero, social clips, and animated stats',
     'gemini-media-producer':'Generating AI images and video clips via Gemini API — hero banners, social graphics, product teasers',
-    'general-purpose':      'Synthesizing research into strategy documents and comprehensive reports'
+    'general-purpose':      'Rendering motion graphics videos using Remotion — product hero, social clips, stats',
+    'distribution-agent':   'Publishing to Reddit, Twitter/X, Telegram, Discord'
   };
 
   /* Map stage IDs to deliverable folder prefixes */
@@ -2115,7 +2351,8 @@
     'strategy': ['02-strategy'],
     'content':  ['03-content', '04-seo'],
     'review':   ['05-review'],
-    'final':    ['06-final']
+    'final':    ['06-final'],
+    'distribution': ['07-distribution']
   };
 
   /* Map agent types to specific deliverable name patterns */
@@ -2129,7 +2366,8 @@
     'sales-engineer':       ['sales-alignment', 'sales-review'],
     'video-producer':       ['product-hero', 'social-clip', 'stats-video'],
     'gemini-media-producer':['hero-banner', 'social-graphic', 'blog-header', 'product-teaser'],
-    'general-purpose':      []
+    'general-purpose':      [],
+    'distribution-agent':   ['distribution-brief', 'distribution-report', 'distribution-results']
   };
 
   function getAgentDeliverables(agent, stageId, deliverables) {
@@ -3007,6 +3245,139 @@
   window.registerUser = registerUser;
   window.copyText = copyText;
   window.removeMember = removeMember;
+
+  /* ============================================================
+     DISTRIBUTION CONFIG PANEL
+  ============================================================ */
+
+  var distPlatformFields = {
+    reddit: ['client_id', 'client_secret', 'username', 'password', 'user_agent', 'default_subreddit'],
+    twitter: ['api_key', 'api_secret', 'access_token', 'access_token_secret'],
+    telegram: ['bot_token', 'chat_id'],
+    discord: ['webhook_url']
+  };
+
+  function toggleDistPanel() {
+    var panel = document.getElementById('dist-panel');
+    var overlay = document.getElementById('dist-overlay');
+    if (!panel) return;
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      overlay.classList.remove('visible');
+    } else {
+      loadDistConfig();
+      panel.classList.add('open');
+      overlay.classList.add('visible');
+    }
+  }
+  window.toggleDistPanel = toggleDistPanel;
+
+  function toggleDistFields(platform) {
+    var el = document.getElementById('dist-fields-' + platform);
+    if (el) el.classList.toggle('expanded');
+  }
+  window.toggleDistFields = toggleDistFields;
+
+  async function loadDistConfig() {
+    if (!cloudApiUrl || !cloudApiKey) return;
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/distribution/config/raw', {
+        headers: { 'x-api-key': cloudApiKey }
+      });
+      if (!resp.ok) return;
+      var data = await resp.json();
+      if (!data.configured) return;
+
+      var platforms = data.platforms || {};
+      ['reddit', 'twitter', 'telegram', 'discord'].forEach(function (p) {
+        var cfg = platforms[p];
+        var statusEl = document.getElementById('dist-status-' + p);
+        var enabledEl = document.getElementById('dist-' + p + '-enabled');
+
+        if (cfg && Object.keys(cfg).length > 1) {
+          // Platform has config — fill fields
+          (distPlatformFields[p] || []).forEach(function (field) {
+            var input = document.getElementById('dist-' + p + '-' + field);
+            if (input && cfg[field]) input.value = cfg[field];
+          });
+          if (enabledEl) enabledEl.checked = cfg.enabled !== false;
+          if (statusEl) {
+            statusEl.textContent = cfg.enabled !== false ? 'CONFIGURED' : 'DISABLED';
+            statusEl.className = 'dist-status-badge ' + (cfg.enabled !== false ? 'connected' : 'not-configured');
+          }
+        } else {
+          if (statusEl) { statusEl.textContent = 'NOT SET'; statusEl.className = 'dist-status-badge not-configured'; }
+          if (enabledEl) enabledEl.checked = true;
+        }
+      });
+    } catch (e) {
+      console.error('Failed to load distribution config:', e);
+    }
+  }
+
+  async function saveDistPlatform(platform) {
+    if (!cloudApiUrl || !cloudApiKey) { alert('Cloud API not connected'); return; }
+    var fields = distPlatformFields[platform] || [];
+    var config = {};
+    var enabledEl = document.getElementById('dist-' + platform + '-enabled');
+    config.enabled = enabledEl ? enabledEl.checked : true;
+
+    fields.forEach(function (field) {
+      var input = document.getElementById('dist-' + platform + '-' + field);
+      if (input) config[field] = input.value.trim();
+    });
+
+    var resultEl = document.getElementById('dist-result-' + platform);
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/distribution/config/' + platform, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': cloudApiKey },
+        body: JSON.stringify(config)
+      });
+      var data = await resp.json();
+      if (data.success) {
+        var statusEl = document.getElementById('dist-status-' + platform);
+        if (statusEl) {
+          statusEl.textContent = config.enabled ? 'CONFIGURED' : 'DISABLED';
+          statusEl.className = 'dist-status-badge ' + (config.enabled ? 'connected' : 'not-configured');
+        }
+        if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result success'; resultEl.textContent = 'Saved successfully'; }
+        setTimeout(function () { if (resultEl) resultEl.style.display = 'none'; }, 3000);
+      } else {
+        if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result error'; resultEl.textContent = data.error || 'Save failed'; }
+      }
+    } catch (e) {
+      if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result error'; resultEl.textContent = 'Network error: ' + e.message; }
+    }
+  }
+  window.saveDistPlatform = saveDistPlatform;
+
+  async function testDistPlatform(platform) {
+    if (!cloudApiUrl || !cloudApiKey) { alert('Cloud API not connected'); return; }
+    var statusEl = document.getElementById('dist-status-' + platform);
+    var resultEl = document.getElementById('dist-result-' + platform);
+    if (statusEl) { statusEl.textContent = 'TESTING...'; statusEl.className = 'dist-status-badge testing'; }
+
+    try {
+      var resp = await fetch(cloudApiUrl + '/api/distribution/test/' + platform, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': cloudApiKey }
+      });
+      var data = await resp.json();
+      if (data.success) {
+        if (statusEl) { statusEl.textContent = 'CONNECTED'; statusEl.className = 'dist-status-badge connected'; }
+        if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result success'; resultEl.textContent = data.message; }
+      } else {
+        if (statusEl) { statusEl.textContent = 'FAILED'; statusEl.className = 'dist-status-badge failed'; }
+        if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result error'; resultEl.textContent = data.message || data.error || 'Test failed'; }
+      }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'ERROR'; statusEl.className = 'dist-status-badge failed'; }
+      if (resultEl) { resultEl.style.display = 'block'; resultEl.className = 'dist-test-result error'; resultEl.textContent = 'Network error: ' + e.message; }
+    }
+  }
+  window.testDistPlatform = testDistPlatform;
 
   var _origRenderDeliverables = renderDeliverables;
   renderDeliverables = function (data) {

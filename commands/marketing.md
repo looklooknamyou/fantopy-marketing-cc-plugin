@@ -93,6 +93,59 @@ Parse the second word:
 1. Init cloud SDK, call API `GET /api/teams/:teamId/members`
 2. Display members with roles
 
+### If first word is "distribution"
+
+Parse the second word:
+
+**`/marketing distribution setup`** — Interactive distribution platform configuration:
+1. Ask the user which platforms they want to configure (Reddit, Twitter/X, Telegram, Discord)
+2. For each selected platform, collect the required credentials:
+
+   **Reddit:**
+   - `client_id` — from https://www.reddit.com/prefs/apps (create a "script" type app)
+   - `client_secret`
+   - `username` — Reddit account username
+   - `password` — Reddit account password
+   - `user_agent` — suggest `MarketingPipeline/1.0 by u/{username}`
+   - `default_subreddit` — target subreddit (e.g., "marketing", "SaaS", "startups")
+   - **Note**: Reddit's OAuth2 password grant is deprecated for new apps. If it fails, consider using authorization code flow instead.
+
+   **Twitter/X:**
+   - `api_key` — from https://developer.twitter.com/en/portal (create a project + app)
+   - `api_secret`
+   - `access_token`
+   - `access_token_secret`
+
+   **Telegram:**
+   - `bot_token` — from @BotFather on Telegram (`/newbot` command)
+   - `chat_id` — channel (e.g., `@channelname`) or group numeric ID
+
+   **Discord:**
+   - `webhook_url` — from channel settings -> Integrations -> Webhooks -> New Webhook -> Copy URL
+
+3. Write config to `~/.marketing-pipeline/distribution.json` with `"enabled": true` for each configured platform
+4. Set restrictive file permissions: `chmod 600 ~/.marketing-pipeline/distribution.json`
+5. Warn the user: "Your credentials are stored at ~/.marketing-pipeline/distribution.json. Ensure this directory is not tracked by git, synced to cloud storage, or accessible to other users."
+6. For each platform, do a lightweight connectivity test:
+   - Reddit: attempt OAuth2 token fetch
+   - Twitter/X: verify credentials with `GET /2/users/me`
+   - Telegram: call `getMe` endpoint
+   - Discord: send a test embed via webhook (with a note it's a test)
+7. Report which platforms are configured and verified
+
+**`/marketing distribution status`** — Show distribution configuration:
+1. Read `~/.marketing-pipeline/distribution.json`
+2. For each platform, show enabled/disabled status and whether credentials are set (show "set" not actual values)
+3. If config doesn't exist, say "Not configured. Run `/marketing distribution setup` to get started."
+
+**`/marketing distribution test`** — Send test posts to all configured platforms:
+1. Read config, for each enabled platform:
+   - Reddit: Post a test to r/test (sandbox subreddit)
+   - Twitter/X: Post a test tweet (note: will be visible on the account)
+   - Telegram: Send "Distribution test from Marketing Pipeline" to configured chat
+   - Discord: Send a test embed via webhook
+2. Report success/failure per platform with any error messages
+
 ### If first word is "share"
 
 **`/marketing share <slug>`** — Upload a completed local campaign to cloud:
@@ -124,6 +177,11 @@ Usage:
   /marketing research <topic>   - Market intelligence: Market analysis, competitive intel, trends
   /marketing status             - Check pipeline progress
 
+Distribution:
+  /marketing distribution setup   - Configure Reddit, Twitter/X, Telegram, Discord APIs
+  /marketing distribution status  - Show which platforms are configured
+  /marketing distribution test    - Send test posts to all configured platforms
+
 Cloud & Collaboration:
   /marketing cloud setup        - Configure Supabase cloud backend
   /marketing cloud status       - Show cloud connection info
@@ -141,6 +199,8 @@ Examples:
   /marketing campaign Launch our new AI-powered analytics product targeting enterprise CTOs
   /marketing content How zero-trust architecture is transforming cloud security
   /marketing research The enterprise observability platform market in 2026
+  /marketing distribution setup
+  /marketing distribution test
   /marketing cloud setup
   /marketing teams create "My Agency"
   /marketing share ai-powered-analytics-launch
@@ -152,5 +212,5 @@ Examples:
 - Pass the full brief/topic text exactly as provided
 - The orchestrator handles all agent coordination autonomously
 - Do not attempt to run the pipeline yourself — delegate entirely to the orchestrator
-- Cloud commands (cloud, teams, share, browse) are handled directly — do NOT delegate to the orchestrator
+- Cloud commands (cloud, teams, share, browse) and distribution commands are handled directly — do NOT delegate to the orchestrator
 - For cloud commands, use the SDK at `~/.claude/plugins/local/marketing-pipeline/cloud/sdk`
