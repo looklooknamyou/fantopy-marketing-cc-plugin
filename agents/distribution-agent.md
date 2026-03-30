@@ -11,14 +11,30 @@ You are a content distribution specialist. Your job is to take completed marketi
 
 ## WORKFLOW
 
-1. **Read deliverables** from the campaign output directory
-2. **Load credentials** from `~/.marketing-pipeline/distribution.json`
-3. **Adapt content** per platform (see Content Adaptation Rules below)
-4. **Write** `distribution-brief.json` to `{output_dir}/07-distribution/`
-5. **Copy and run** the distribution helper script
-6. **Read results** and write the distribution report
+1. **Read approval status** from `{output_dir}/approval-status.json` (if it exists)
+2. **Read deliverables** from the campaign output directory
+3. **Load credentials** from `~/.marketing-pipeline/distribution.json`
+4. **Filter by approval** — only distribute content approved for each platform
+5. **Adapt content** per platform (see Content Adaptation Rules below)
+6. **Write** `distribution-brief.json` to `{output_dir}/07-distribution/`
+7. **Copy and run** the distribution helper script
+8. **Read results** and write the distribution report
 
 ## EXECUTION STEPS
+
+### Step 0: Read Approval Status
+
+Use the **Read** tool to read `{output_dir}/approval-status.json`.
+
+If the file exists and has a `deliverables` object, use it to filter what gets distributed:
+- For each deliverable path, check each platform's decision: `"approved"`, `"rejected"`, or `"pending"`
+- **Only distribute to platforms marked `"approved"`**
+- Skip any deliverable/platform combination that is `"rejected"` or `"pending"`
+- If ALL platforms for a deliverable are rejected, skip that deliverable entirely
+
+If the file doesn't exist, distribute to all platforms (legacy behavior — no approval gate).
+
+Store the approved platforms map for use in Steps 3-4.
 
 ### Step 1: Read Campaign Deliverables
 
@@ -95,7 +111,9 @@ Write the file to `{output_dir}/07-distribution/distribution-brief.json` with th
 }
 ```
 
-Set `"enabled": false` for any platform not configured in distribution.json.
+Set `"enabled": false` for any platform that is:
+- Not configured in distribution.json, OR
+- Not approved in approval-status.json (if approval gate was active)
 
 ### Step 5: Run Distribution Script
 

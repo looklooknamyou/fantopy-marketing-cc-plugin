@@ -116,7 +116,9 @@ async function syncStatus(campaignId, pipelineStatus) {
 
   const status = statusObj.status === 'complete' || statusObj.status === 'done'
     ? 'done'
-    : statusObj.status === 'failed' ? 'failed' : 'running';
+    : statusObj.status === 'failed' ? 'failed'
+    : statusObj.status === 'awaiting_approval' ? 'awaiting_approval'
+    : 'running';
 
   const updateData = {
     pipeline_status: statusObj,
@@ -203,6 +205,37 @@ async function uploadDeliverable(campaignId, localFilePath, relativePath) {
   return true;
 }
 
+async function syncApproval(campaignId, approvalStatus) {
+  if (!isEnabled() || !campaignId) return false;
+
+  let statusObj = approvalStatus;
+  if (typeof approvalStatus === 'string') {
+    try {
+      statusObj = JSON.parse(fs.readFileSync(approvalStatus, 'utf-8'));
+    } catch (e) {
+      console.error('[cloud] Failed to read approval-status.json:', e.message);
+      return false;
+    }
+  }
+
+  const { error } = await supabase
+    .from('campaigns')
+    .update({
+      approval_status: statusObj,
+      status: 'awaiting_approval',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', campaignId);
+
+  if (error) {
+    console.error('[cloud] Failed to sync approval:', error.message);
+    return false;
+  }
+
+  console.log('[cloud] Approval status synced');
+  return true;
+}
+
 async function listCampaigns(teamId) {
   if (!isEnabled()) return [];
 
@@ -229,5 +262,6 @@ module.exports = {
   createCampaign,
   syncStatus,
   uploadDeliverable,
+  syncApproval,
   listCampaigns
 };

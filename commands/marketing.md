@@ -146,6 +146,30 @@ Parse the second word:
    - Discord: Send a test embed via webhook
 2. Report success/failure per platform with any error messages
 
+### If first word is "approve"
+
+Parse the remaining arguments to get `<slug>` and optional flags:
+
+**`/marketing approve <slug>`** — Interactive content approval for a pipeline awaiting review:
+1. Look for `./marketing-output/<slug>/approval-status.json`
+2. If not found, report: "No approval pending for campaign '<slug>'. The pipeline must reach the approval stage first."
+3. Read the approval-status.json and display each deliverable with its target platforms
+4. For each deliverable, ask the user: "Approve for all platforms? [Y/n/select]"
+   - `Y` or enter → approve for all platforms
+   - `n` → reject for all platforms
+   - `select` → ask per-platform (Reddit: y/n, Twitter: y/n, Telegram: y/n, Discord: y/n)
+5. Update approval-status.json with decisions and set status to "approved" or "rejected"
+6. Write the file back with `chmod 644` so the polling script can read it
+7. Report summary: "Approved X/Y items. Pipeline will resume distribution shortly."
+
+**`/marketing approve <slug> --all`** — Approve all deliverables for all platforms:
+1. Read `./marketing-output/<slug>/approval-status.json`
+2. Set all platforms for all deliverables to "approved"
+3. Set status to "approved" and decidedAt timestamp
+4. Write back to file
+5. If cloud is configured, sync via SDK: `cloud.syncApproval(campaignId, approvalStatus)`
+6. Report: "All deliverables approved. Pipeline resuming distribution."
+
 ### If first word is "share"
 
 **`/marketing share <slug>`** — Upload a completed local campaign to cloud:
@@ -177,7 +201,9 @@ Usage:
   /marketing research <topic>   - Market intelligence: Market analysis, competitive intel, trends
   /marketing status             - Check pipeline progress
 
-Distribution:
+Approval & Distribution:
+  /marketing approve <slug>       - Review and approve content before distribution
+  /marketing approve <slug> --all - Approve all content and resume pipeline
   /marketing distribution setup   - Configure Reddit, Twitter/X, Telegram, Discord APIs
   /marketing distribution status  - Show which platforms are configured
   /marketing distribution test    - Send test posts to all configured platforms
@@ -199,6 +225,8 @@ Examples:
   /marketing campaign Launch our new AI-powered analytics product targeting enterprise CTOs
   /marketing content How zero-trust architecture is transforming cloud security
   /marketing research The enterprise observability platform market in 2026
+  /marketing approve ai-powered-analytics-launch
+  /marketing approve ai-powered-analytics-launch --all
   /marketing distribution setup
   /marketing distribution test
   /marketing cloud setup
@@ -212,5 +240,5 @@ Examples:
 - Pass the full brief/topic text exactly as provided
 - The orchestrator handles all agent coordination autonomously
 - Do not attempt to run the pipeline yourself — delegate entirely to the orchestrator
-- Cloud commands (cloud, teams, share, browse) and distribution commands are handled directly — do NOT delegate to the orchestrator
+- Cloud commands (cloud, teams, share, browse), distribution commands, and approve commands are handled directly — do NOT delegate to the orchestrator
 - For cloud commands, use the SDK at `~/.claude/plugins/local/marketing-pipeline/cloud/sdk`

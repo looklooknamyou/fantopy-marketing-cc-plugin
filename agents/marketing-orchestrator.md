@@ -54,7 +54,7 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
   "slug": "campaign-slug",
   "startTime": "2026-03-25T10:30:00Z",
   "status": "running",
-  "progress": { "current": 2, "total": 7 },
+  "progress": { "current": 2, "total": 8 },
   "stages": [
     {
       "id": "setup", "name": "Setup", "status": "done",
@@ -73,6 +73,7 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
     { "id": "content", "name": "Content + SEO + Video + Media", "status": "pending" },
     { "id": "review", "name": "Review", "status": "pending" },
     { "id": "final", "name": "Final Report", "status": "pending" },
+    { "id": "approval", "name": "Content Approval", "status": "pending" },
     { "id": "distribution", "name": "Distribution", "status": "pending" }
   ],
   "deliverables": [
@@ -87,12 +88,12 @@ Use the Write tool to write the full JSON each time (overwrite). The JSON schema
 ```
 
 **Use ISO 8601 timestamps** for startTime/endTime. Use "HH:MM:SS" for activity times.
-**Stages for full-funnel**: setup, research, strategy, content, review, final, distribution (total: 7)
+**Stages for full-funnel**: setup, research, strategy, content, review, final, approval, distribution (total: 8)
 **Stages for content-production**: setup, research, content, seo-review, final (total: 5)
 **Stages for market-intelligence**: setup, research, synthesis, final (total: 4)
 
 ### At Pipeline End
-After Stage 7 (Distribution) completes — or after Stage 6 if distribution is skipped:
+After Stage 8 (Distribution) completes — or after Stage 6 if approval/distribution are skipped:
 
 ```bash
 # Stop the HTTP server
@@ -289,13 +290,13 @@ Spawn all 3 in a single message with multiple Task tool calls:
    - Content deliverables produced, SEO strategy, review scores
    - Recommended next steps
 3. Write `README.md` as table of contents linking all deliverables
-4. **Do NOT stop the HTTP server or write final pipeline-status.json yet** — Stage 7 may follow.
+4. **Do NOT stop the HTTP server or write final pipeline-status.json yet** — Stages 7-8 may follow.
 
-### Stage 7: Distribution (CONDITIONAL - 1 agent)
+### Stage 7: Content Approval (CONDITIONAL — auto-pause)
 
-This stage is **optional**. It only runs if the user has configured distribution platforms.
+This stage pauses the pipeline so team members can review and approve content before distribution. It only runs if distribution is configured.
 
-**Pre-check**: Before spawning the agent, check if the config exists:
+**Pre-check**: Before entering the approval gate, check if distribution is configured:
 
 ```bash
 test -f ~/.marketing-pipeline/distribution.json && echo "DISTRIBUTION_CONFIGURED=true" || echo "DISTRIBUTION_CONFIGURED=false"
@@ -303,20 +304,77 @@ test -f ~/.marketing-pipeline/distribution.json && echo "DISTRIBUTION_CONFIGURED
 
 **If `DISTRIBUTION_CONFIGURED=false`**:
 - Log activity: "Distribution skipped — no platforms configured. Run /marketing distribution setup to enable."
-- Mark the distribution stage as "skipped" in pipeline-status.json
-- Proceed to pipeline finalization (stop server, write final status, print completion report)
+- Mark both approval and distribution stages as "skipped" in pipeline-status.json
+- Proceed to pipeline finalization
 
 **If `DISTRIBUTION_CONFIGURED=true`**:
+
+1. **Write `approval-status.json`** to `./marketing-output/{slug}/` with all distributable deliverables:
+
+```json
+{
+  "status": "pending",
+  "createdAt": "2026-03-30T10:00:00Z",
+  "deliverables": {
+    "03-content/blog-posts/{topic}-blog.md": {
+      "name": "Blog Post",
+      "platforms": { "reddit": "pending", "twitter": "pending", "telegram": "pending", "discord": "pending" }
+    },
+    "03-content/social-media/social-media-pack.md": {
+      "name": "Social Media Pack",
+      "platforms": { "reddit": "pending", "twitter": "pending", "telegram": "pending", "discord": "pending" }
+    },
+    "06-final/executive-summary.md": {
+      "name": "Executive Summary",
+      "platforms": { "reddit": "pending", "twitter": "pending", "telegram": "pending", "discord": "pending" }
+    }
+  }
+}
+```
+
+Include only deliverables that are actually used for distribution (blog, social pack, executive summary). Include `"preview"` field with the first 200 characters of each deliverable for dashboard display.
+
+2. **Update pipeline-status.json**: Set status to `"awaiting_approval"`, mark approval stage as `"running"`.
+
+3. **Sync to cloud** (if CLOUD_CAMPAIGN_ID is set):
+```javascript
+const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
+(async () => {
+  await cloud.init();
+  await cloud.syncApproval('{CLOUD_CAMPAIGN_ID}', './marketing-output/{slug}/approval-status.json');
+})();
+```
+
+4. **Log activity**: "Awaiting content approval — review in dashboard or run /marketing approve {slug}"
+
+5. **Poll for approval** — run the polling script via Bash:
+```bash
+timeout 600 node ~/.claude/plugins/local/marketing-pipeline/assets/distribution/approval-poll.js ./marketing-output/{slug}/approval-status.json
+```
+
+This blocks until a team member approves/rejects content (via the dashboard Staging panel or CLI).
+
+6. **Process result** (check exit code via `$?` or Bash `&&`/`||`):
+   - **Exit 0** (at least one item approved): Read stdout JSON for approved items. Mark approval stage as "done". Proceed to Stage 8 with approved items.
+   - **Exit 1** (all items rejected): Mark approval stage as "rejected". Log activity: "All content rejected by reviewer". Skip distribution. Proceed to finalization.
+   - **Exit 124** (timeout — 10 minutes elapsed): Mark approval stage as "timed_out". Log activity: "Approval timed out after 10 minutes". Skip distribution. Proceed to finalization.
+
+### Stage 8: Distribution (CONDITIONAL - 1 agent)
+
+Only runs if Stage 7 approval succeeded and at least one item was approved.
+
 - Mark distribution stage as "running" in pipeline-status.json
 - Spawn the distribution agent:
 
 **Agent I: Content Distribution**
 - subagent_type: "distribution-agent"
 - model: sonnet
-- Prompt: "Distribute the completed campaign deliverables to configured platforms.
+- Prompt: "Distribute the approved campaign deliverables to configured platforms.
 
   **Campaign output directory**: ./marketing-output/{slug}/
   **Plugin assets directory**: ~/.claude/plugins/local/marketing-pipeline
+
+  **IMPORTANT**: Read `approval-status.json` in the output directory first. Only distribute content to platforms marked as 'approved'. Skip rejected or pending items.
 
   Read the campaign deliverables (strategy, blog posts, social media pack, executive summary, media files), load distribution credentials from ~/.marketing-pipeline/distribution.json, adapt content per platform (Reddit, Twitter/X, Telegram, Discord), write the distribution-brief.json, copy and run the distribute.js helper script, then write the distribution report.
 
@@ -327,7 +385,7 @@ test -f ~/.marketing-pipeline/distribution.json && echo "DISTRIBUTION_CONFIGURED
 2. Mark distribution stage as "done" in pipeline-status.json
 3. Log distribution results in activities
 
-**Pipeline finalization** (runs after Stage 7, or after Stage 6 if distribution was skipped):
+**Pipeline finalization** (runs after Stage 8, or after Stage 6 if approval/distribution were skipped):
 1. Write final pipeline-status.json with status "done" and all stages marked "done"
 2. Wait 2 seconds so the dashboard can poll the final state
 3. Stop the HTTP server
@@ -490,6 +548,7 @@ const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipel
 | Pipeline start (Setup) | `cloud.init()` → `cloud.createCampaign()` → capture campaign ID |
 | Each `pipeline-status.json` write | `cloud.syncStatus(campaignId, statusFilePath)` |
 | Each deliverable file created | `cloud.uploadDeliverable(campaignId, localPath, relativePath)` |
+| Approval gate (Stage 7) | `cloud.syncApproval(campaignId, approvalStatusPath)` |
 | Dashboard open | Append `?cloud=1&campaign_id=...&supabase_url=...&supabase_key=...` |
 
 ---
