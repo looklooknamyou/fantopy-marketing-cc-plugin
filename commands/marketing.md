@@ -1,244 +1,132 @@
 ---
-description: Run autonomous marketing pipelines - campaigns, content production, or market research
-argument-hint: "<campaign|content|research|status> <brief or topic>"
----
-
-# Marketing Pipeline
-
-You are the entry point for the marketing pipeline system. Parse the user's command and route to the appropriate pipeline mode.
+description: Run autonomous marketing pipelines - campaigns, content production, market research, or sustained campaigns
 
 ## Arguments
 
-Raw arguments: $ARGUMENTS
+$ARGUMENTS - The campaign brief or topic to execute.
 
 ## Routing Logic
 
-Parse the first word of $ARGUMENTS to determine the mode:
-
 ### If first word is "campaign"
-Launch the **marketing-orchestrator** agent using the Task tool:
-- subagent_type: "marketing-orchestrator"
-- prompt: "Run a FULL FUNNEL marketing pipeline for the following campaign brief: [remaining arguments after 'campaign']. Pipeline mode: full-funnel. Execute autonomously and deliver all outputs to ./marketing-output/[slugified-campaign-name]/"
+  - Launch full-funnel pipeline
+- Launch content-production pipeline
+- Launch market-intelligence pipeline
 
 ### If first word is "content"
-Launch the **marketing-orchestrator** agent using the Task tool:
-- subagent_type: "marketing-orchestrator"
-- prompt: "Run a CONTENT PRODUCTION marketing pipeline for the following topic: [remaining arguments after 'content']. Pipeline mode: content-production. Execute autonomously and deliver all outputs to ./marketing-output/[slugified-topic-name]/"
+  - Launch content-production pipeline
 
 ### If first word is "research"
-Launch the **marketing-orchestrator** agent using the Task tool:
-- subagent_type: "marketing-orchestrator"
-- prompt: "Run a MARKET INTELLIGENCE pipeline for the following topic: [remaining arguments after 'research']. Pipeline mode: market-intelligence. Execute autonomously and deliver all outputs to ./marketing-output/[slugified-topic-name]/"
+  - Launch market-intelligence pipeline
 
 ### If first word is "status"
-Check pipeline status:
-1. Look for any `./marketing-output/` directories and list them
-2. For each, check which files exist to determine progress
-3. Report which stages are complete vs pending
+  - Check pipeline status
 
 ### If first word is "cloud"
-
-Parse the second word:
-
-**`/marketing cloud setup`** — Interactive Supabase configuration:
-1. Ask the user for their Supabase project URL and anon key (or check if self-hosted)
-2. Ask for their API key (obtained from `/marketing cloud register` or the API server)
-3. Write config to `~/.marketing-pipeline/cloud.json`:
-   ```json
-   {
-     "supabase_url": "https://xxx.supabase.co",
-     "supabase_anon_key": "eyJ...",
-     "active_team_id": null
-   }
-   ```
-4. Set `MARKETING_CLOUD_API_KEY` env var reminder
-5. Test connection using the SDK: `const cloud = require('~/.claude/plugins/local/marketing-pipeline/cloud/sdk'); await cloud.init();`
-
-**`/marketing cloud status`** — Show current cloud connection info:
-1. Read `~/.marketing-pipeline/cloud.json`
-2. Check if `MARKETING_CLOUD_API_KEY` is set
-3. Try `cloud.init()` and report success/failure
-4. Show active team ID if set
-
-**`/marketing cloud register`** — Register a new user:
-1. Ask for email and display name
-2. POST to the API server `/api/auth/register`
-3. Return the API key with instructions to set `MARKETING_CLOUD_API_KEY`
+  - Configure cloud backend
+  - Browse team campaigns
+  - Register a new user
 
 ### If first word is "teams"
-
-Parse the second word:
-
-**`/marketing teams list`** — List user's teams:
-1. Init cloud SDK, call API `GET /api/teams`
-2. Display teams with roles
-
-**`/marketing teams create <name>`** — Create a new team:
-1. Init cloud SDK, call API `POST /api/teams` with name
-2. Display team info and set as active team in config
-
-**`/marketing teams invite <email>`** — Invite someone to active team:
-1. Init cloud SDK, call API `POST /api/teams/:teamId/invite` with email
-2. Display the invitation token and join command
-
-**`/marketing teams join <token>`** — Accept a team invitation:
-1. Init cloud SDK, call API `POST /api/teams/join` with token
-2. Display success and team info
-
-**`/marketing teams switch <team-id>`** — Switch active team:
-1. Update `active_team_id` in `~/.marketing-pipeline/cloud.json`
-2. Confirm the switch
-
-**`/marketing teams members`** — List members of active team:
-1. Init cloud SDK, call API `GET /api/teams/:teamId/members`
-2. Display members with roles
+  - List user's teams
 
 ### If first word is "distribution"
-
-Parse the second word:
-
-**`/marketing distribution setup`** — Interactive distribution platform configuration:
-1. Ask the user which platforms they want to configure (Reddit, Twitter/X, Telegram, Discord)
-2. For each selected platform, collect the required credentials:
-
-   **Reddit:**
-   - `client_id` — from https://www.reddit.com/prefs/apps (create a "script" type app)
-   - `client_secret`
-   - `username` — Reddit account username
-   - `password` — Reddit account password
-   - `user_agent` — suggest `MarketingPipeline/1.0 by u/{username}`
-   - `default_subreddit` — target subreddit (e.g., "marketing", "SaaS", "startups")
-   - **Note**: Reddit's OAuth2 password grant is deprecated for new apps. If it fails, consider using authorization code flow instead.
-
-   **Twitter/X:**
-   - `api_key` — from https://developer.twitter.com/en/portal (create a project + app)
-   - `api_secret`
-   - `access_token`
-   - `access_token_secret`
-
-   **Telegram:**
-   - `bot_token` — from @BotFather on Telegram (`/newbot` command)
-   - `chat_id` — channel (e.g., `@channelname`) or group numeric ID
-
-   **Discord:**
-   - `webhook_url` — from channel settings -> Integrations -> Webhooks -> New Webhook -> Copy URL
-
-3. Write config to `~/.marketing-pipeline/distribution.json` with `"enabled": true` for each configured platform
-4. Set restrictive file permissions: `chmod 600 ~/.marketing-pipeline/distribution.json`
-5. Warn the user: "Your credentials are stored at ~/.marketing-pipeline/distribution.json. Ensure this directory is not tracked by git, synced to cloud storage, or accessible to other users."
-6. For each platform, do a lightweight connectivity test:
-   - Reddit: attempt OAuth2 token fetch
-   - Twitter/X: verify credentials with `GET /2/users/me`
-   - Telegram: call `getMe` endpoint
-   - Discord: send a test embed via webhook (with a note it's a test)
-7. Report which platforms are configured and verified
-
-**`/marketing distribution status`** — Show distribution configuration:
-1. Read `~/.marketing-pipeline/distribution.json`
-2. For each platform, show enabled/disabled status and whether credentials are set (show "set" not actual values)
-3. If config doesn't exist, say "Not configured. Run `/marketing distribution setup` to get started."
-
-**`/marketing distribution test`** — Send test posts to all configured platforms:
-1. Read config, for each enabled platform:
-   - Reddit: Post a test to r/test (sandbox subreddit)
-   - Twitter/X: Post a test tweet (note: will be visible on the account)
-   - Telegram: Send "Distribution test from Marketing Pipeline" to configured chat
-   - Discord: Send a test embed via webhook
-2. Report success/failure per platform with any error messages
+  - Share campaign
+  - Browse team campaigns from cloud
 
 ### If first word is "approve"
-
-Parse the remaining arguments to get `<slug>` and optional flags:
-
-**`/marketing approve <slug>`** — Interactive content approval for a pipeline awaiting review:
-1. Look for `./marketing-output/<slug>/approval-status.json`
-2. If not found, report: "No approval pending for campaign '<slug>'. The pipeline must reach the approval stage first."
-3. Read the approval-status.json and display each deliverable with its target platforms
-4. For each deliverable, ask the user: "Approve for all platforms? [Y/n/select]"
-   - `Y` or enter → approve for all platforms
-   - `n` → reject for all platforms
-   - `select` → ask per-platform (Reddit: y/n, Twitter: y/n, Telegram: y/n, Discord: y/n)
-5. Update approval-status.json with decisions and set status to "approved" or "rejected"
-6. Write the file back with `chmod 644` so the polling script can read it
-7. Report summary: "Approved X/Y items. Pipeline will resume distribution shortly."
-
-**`/marketing approve <slug> --all`** — Approve all deliverables for all platforms:
-1. Read `./marketing-output/<slug>/approval-status.json`
-2. Set all platforms for all deliverables to "approved"
-3. Set status to "approved" and decidedAt timestamp
-4. Write back to file
-5. If cloud is configured, sync via SDK: `cloud.syncApproval(campaignId, approvalStatus)`
-6. Report: "All deliverables approved. Pipeline resuming distribution."
-
-### If first word is "share"
-
-**`/marketing share <slug>`** — Upload a completed local campaign to cloud:
-1. Check cloud is configured and has active team
-2. Read `./marketing-output/<slug>/pipeline-status.json`
-3. Create campaign record via `cloud.createCampaign()`
-4. Sync status via `cloud.syncStatus()`
-5. Find all deliverable files in `./marketing-output/<slug>/`
-6. Upload each via `cloud.uploadDeliverable()`
-7. Report upload summary
+  - Approve all content for distribution
 
 ### If first word is "browse"
+  - View dashboard
 
-**`/marketing browse`** — List team campaigns from cloud:
-1. Init cloud SDK
-2. Call `cloud.listCampaigns()` for active team
-3. Display campaigns with status, dates, and dashboard URLs
-4. For each campaign, show: `http://localhost:8847/pipeline-dashboard.html?cloud=1&campaign_id=<id>&supabase_url=<url>&supabase_key=<key>`
+### If first word is "share"
+  - Upload a completed local campaign to cloud
 
-### If no arguments or unrecognized
-Display this help:
+## Routing Logic
 
+### If first word is "sustain"
+
+**`/marketing sustain create <brief>`** — Create a new sustained (recurring) campaign:
+1. Parse the remaining arguments after "create" as a campaign brief
+2. Ask for user for configuration:
+   - **Cadence**: daily, weekly, bi-weekly, or monthly
+   - **Content types per batch**: blog-post, social-media, email (multi-select)
+   - **Total batches**: how many batches to generate
+   - **Preferred run time**: day of week + hour
+3. Generate a slug from the brief
+
+4. Launch **marketing-orchestrator** agent using the Task tool:
+   - subagent_type: "marketing-orchestrator"
+   - prompt: "Run a SUSTAINED CAMPAIGN INITIALIZATION for the following brief: [brief]. Pipeline mode: sustained-campaign-init. Campaign parameters: cadence=[cadence], total_batches=[N], content_types=[types], run_schedule=[schedule]. Campaign directory: ~/.marketing-pipeline/campaigns/[slug]/. Execute autonomously: create directories, run research, synthesize strategy, generate content calendar, write config files."
+
+5. After orchestrator completes, set up macOS launchd scheduler:
+   - **Write campaigns-index.json**:
+   Before launching, write `campaigns-index.json` to `~/.marketing-pipeline/campaigns/` with all campaign metadata. Format:
+
+   ```json
+   {
+     "generated_at": "<ISO timestamp>",
+     "campaigns": [
+       {
+         "slug": "...",
+         "dir": "<absolute path>",
+         "brief": "...",
+         "cadence": "weekly",
+         "status": "active",
+         "current_batch": 0,
+         "total_batches": 12,
+         "next_run": "...",
+         "last_run_at": "...",
+         "last_run_status": "success",
+         "content_types": ["blog-post", "social-media", "email"]
+       }
+     ]
+   }
+   ```
+
+   **Function**: `generateCampaignsIndex()`
+   - Called by: `/marketing sustain list` and `/marketing sustain status` to refresh the index file
+   - Takes campaign directory path from config or defaults to `~/.marketing-pipeline/campaigns/`
+   - Returns array of campaign slugs
+   - Each object contains: slug, dir, brief, cadence, status, current_batch, total_batches, next_run, last_run_at, last_run_status, content_types
+
+6. **Function**: `slugify(brief)`
+   - Converts campaign brief to a URL-friendly slug (lowercase, kebab-case)
+   - Returns: e.g., "fantopy weekly content" → "fantopy-weekly-content"
+   - Replaces spaces with hyphens, removes special characters
+   - Examples:
+     - "Weekly newsletter for product launches" → "weekly-newsletter-for-product-launches"
+     - "Marketing content for AI SaaS" → "ai-content-marketing-for-saas-product"
+     - "Getting started with Fantopy" → "getting-started-with-fantopy"
+
+7. **Function**: `parseWizardFlags(arguments)`
+   - Parses flag arguments like `--cadence weekly --batches 12 --day monday --hour 9 --types blog-post,social-media,email`
+   - Returns object with cadence, total_batches, day, hour, types
+   - If flags are present, skip interactive questions
+   - Default values: cadence="weekly", total_batches=12, day=1, hour=9, types=["blog-post","social-media","email"]
+
+7. **Function**: `writeCampaignsIndex(file, campaignsData)`
+   - Writes campaigns-index.json to campaign directory
+   - Format matches the hub view structure
+   - Includes timestamp and campaign array
+
+8. **Function**: `loadCampaignsIndex(dir)`
+   - Reads campaigns-index.json from specified directory
+   - Returns parsed campaigns array or empty array
+
+9. **Function**: `generateSlug(brief)`
+   - Helper: Creates unique campaign slug from brief
+   - Combines kebab-case, removes special chars
+   - Examples: "Weekly content" → "weekly-content"
+   - Returns: "weekly-content"
+
+---
+
+## Implementation Notes
+
+- The campaigns-index.json must be served from the campaign directory root
+- Path is resolved relative: `./campaigns/[slug]/`
+- Default campaign directory when no campaign_dir URL param: campaigns root
+- The hub view polls the index file and loads campaign data
+- File generation happens on sustain commands: list, status
 ```
-Marketing Pipeline - Autonomous Marketing Orchestration
-
-Usage:
-  /marketing campaign <brief>   - Full funnel: Research -> Strategy -> Content -> SEO -> Review
-  /marketing content <topic>    - Content production: Blog posts, social media, landing pages, emails
-  /marketing research <topic>   - Market intelligence: Market analysis, competitive intel, trends
-  /marketing status             - Check pipeline progress
-
-Approval & Distribution:
-  /marketing approve <slug>       - Review and approve content before distribution
-  /marketing approve <slug> --all - Approve all content and resume pipeline
-  /marketing distribution setup   - Configure Reddit, Twitter/X, Telegram, Discord APIs
-  /marketing distribution status  - Show which platforms are configured
-  /marketing distribution test    - Send test posts to all configured platforms
-
-Cloud & Collaboration:
-  /marketing cloud setup        - Configure Supabase cloud backend
-  /marketing cloud status       - Show cloud connection info
-  /marketing cloud register     - Register a new cloud account
-  /marketing teams list         - List your teams
-  /marketing teams create <n>   - Create a new team workspace
-  /marketing teams invite <e>   - Invite a team member by email
-  /marketing teams join <token> - Accept a team invitation
-  /marketing teams switch <id>  - Switch active team
-  /marketing teams members      - List team members
-  /marketing share <slug>       - Upload a local campaign to cloud
-  /marketing browse             - Browse team campaigns from cloud
-
-Examples:
-  /marketing campaign Launch our new AI-powered analytics product targeting enterprise CTOs
-  /marketing content How zero-trust architecture is transforming cloud security
-  /marketing research The enterprise observability platform market in 2026
-  /marketing approve ai-powered-analytics-launch
-  /marketing approve ai-powered-analytics-launch --all
-  /marketing distribution setup
-  /marketing distribution test
-  /marketing cloud setup
-  /marketing teams create "My Agency"
-  /marketing share ai-powered-analytics-launch
-  /marketing browse
-```
-
-## Important
-- Always launch the marketing-orchestrator agent for campaign, content, and research modes
-- Pass the full brief/topic text exactly as provided
-- The orchestrator handles all agent coordination autonomously
-- Do not attempt to run the pipeline yourself — delegate entirely to the orchestrator
-- Cloud commands (cloud, teams, share, browse), distribution commands, and approve commands are handled directly — do NOT delegate to the orchestrator
-- For cloud commands, use the SDK at `~/.claude/plugins/local/marketing-pipeline/cloud/sdk`

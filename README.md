@@ -1,6 +1,6 @@
 # Marketing Pipeline Plugin for Claude Code
 
-An autonomous multi-agent marketing pipeline that orchestrates 9+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, AI-generated images and video clips, SEO optimization, and quality review — all from a single command.
+An autonomous multi-agent marketing pipeline that orchestrates 9+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, AI-generated images and video clips, SEO optimization, and quality review — all from a single command. Supports both **one-shot** pipelines (run once, done) and **sustained** campaigns (auto-generate content on a recurring schedule for weeks/months).
 
 ## What It Does
 
@@ -114,12 +114,29 @@ You should see the help text with available commands.
 
 ## Commands
 
+### One-Shot Pipelines
+
 | Command | Description | Agents | Stages |
 |---------|-------------|--------|--------|
 | `/marketing campaign <brief>` | Full-funnel campaign | 9 agents | 6 stages |
 | `/marketing content <topic>` | Content production only | 4 agents | 5 stages |
 | `/marketing research <topic>` | Market intelligence only | 5 agents | 4 stages |
 | `/marketing status` | Check pipeline progress | — | — |
+
+### Sustained (Long-Running) Campaigns
+
+| Command | Description |
+|---------|-------------|
+| `/marketing sustain create <brief>` | Create recurring campaign with content calendar + scheduler |
+| `/marketing sustain list` | List all sustained campaigns with status |
+| `/marketing sustain status <slug>` | Detailed campaign status + upcoming calendar |
+| `/marketing sustain run <slug>` | Manually trigger next content batch |
+| `/marketing sustain pause <slug>` | Pause scheduled execution |
+| `/marketing sustain resume <slug>` | Resume scheduled execution |
+| `/marketing sustain delete <slug>` | Delete campaign and scheduler |
+| `/marketing sustain calendar <slug>` | View full content calendar |
+| `/marketing sustain refresh <slug>` | Force strategy refresh on next batch |
+| `/marketing sustain history <slug>` | View batch execution history |
 
 ### Shortcut Commands
 
@@ -129,6 +146,7 @@ You should see the help text with available commands.
 | `/marketing-content <topic>` | `/marketing content <topic>` |
 | `/marketing-research <topic>` | `/marketing research <topic>` |
 | `/marketing-status` | `/marketing status` |
+| `/marketing-sustain <subcommand>` | `/marketing sustain <subcommand>` |
 
 ## Usage Examples
 
@@ -155,6 +173,20 @@ Faster pipeline focused on content production — blog post, social media pack, 
 ```
 
 Deep research mode — market analysis, competitive intelligence, and trend analysis, synthesized into strategic recommendations.
+
+### Sustained Campaign
+
+```
+/marketing sustain create Weekly content marketing for our AI SaaS product launch
+```
+
+Creates a long-running campaign: runs research + strategy once, generates a content calendar (e.g. 12 weekly batches), and installs a macOS launchd scheduler. Each week, it auto-runs Claude Code headlessly to produce a fresh content batch (blog post, social media, email) based on the calendar.
+
+```
+/marketing sustain status my-campaign-slug
+```
+
+Check detailed progress, upcoming calendar entries, and batch history.
 
 ### Check Status
 
@@ -195,6 +227,61 @@ Stage 6: Final (SEQUENTIAL)
 ```
 
 Agents within the same stage run **in parallel**. Stages run **sequentially** (each stage waits for the previous to complete).
+
+### Sustained Campaign Pipeline
+
+```
+/marketing sustain create <brief>
+         │
+         ▼
+   ┌─────────────┐
+   │  INIT PHASE  │  (runs once, interactively)
+   │              │
+   │  1. Setup    │  Create campaign directory tree
+   │  2. Research │  4 parallel agents (market, competitive, trends, social)
+   │  3. Strategy │  Synthesize marketing strategy document
+   │  4. Calendar │  Generate themed content plan for all N batches
+   │  5. Config   │  Write config + install macOS launchd scheduler
+   └──────┬──────┘
+          │
+          ▼  launchd fires on schedule (daily/weekly/bi-weekly/monthly)
+   ┌─────────────┐
+   │ BATCH RUNS   │  (headless, unattended — repeats N times)
+   │              │
+   │  1. Setup    │  Create batch directory, read calendar entry
+   │  2. Research │  2 agents scoped to this batch's theme
+   │  3. Content  │  Blog post + social media + email from calendar brief
+   │  4. SEO      │  Review and optimize content
+   │  5. Compile  │  Write deliverables, update state
+   └──────┬──────┘
+          │
+          ▼  every N batches
+   Strategy refresh: re-run research, update strategy, regenerate pending calendar entries
+
+          │
+          ▼  after all batches complete
+   Campaign auto-completes
+```
+
+**Campaign data structure:**
+
+```
+~/.marketing-pipeline/campaigns/{slug}/
+  campaign-config.json      # Immutable settings (cadence, total batches)
+  campaign-state.json       # Mutable state (current batch, status, last run)
+  content-calendar.json     # Themed entries with angles, keywords, tone per batch
+  batch-history.json        # Log of each batch result
+  run-batch.sh              # Shell script invoked by launchd
+  foundation/
+    01-research/            # Initial research outputs
+    02-strategy/            # Marketing strategy (refreshed every N batches)
+  batches/
+    batch-001/              # Content from batch 1
+    batch-002/              # Content from batch 2
+    ...
+  logs/
+    batch-001.log           # Execution log per batch
+```
 
 ### Agent Roster
 
@@ -243,9 +330,13 @@ marketing-pipeline/
 │   ├── marketing-campaign.md    # Full funnel shortcut
 │   ├── marketing-content.md     # Content production shortcut
 │   ├── marketing-research.md    # Market intelligence shortcut
-│   └── marketing-status.md      # Pipeline status checker
+│   ├── marketing-status.md      # Pipeline status checker
+│   └── marketing-sustain.md     # Sustained campaign shortcut
 └── assets/
-    ├── pipeline-dashboard.html  # Real-time monitoring dashboard (1,900+ lines)
+    ├── pipeline-dashboard.html  # Real-time monitoring dashboard (sustained panel included)
+    ├── sustain/                  # Sustained campaign templates
+    │   ├── plist-template.xml   # macOS launchd schedule template
+    │   └── run-batch-template.sh # Headless batch runner template
     ├── gemini-media/             # AI media generation via Gemini API
     │   ├── generate_media.py    # Image + video generation script
     │   └── requirements.txt     # Python deps (google-genai)
@@ -271,6 +362,7 @@ marketing-pipeline/
 - **Node.js 18+** (for Remotion video rendering)
 - **`GEMINI_API_KEY`** environment variable (for AI image/video generation via Gemini API — get one at [ai.google.dev](https://ai.google.dev/))
 - **Subagent types** must be available: market-researcher, competitive-analyst, trend-analyst, content-marketer, seo-specialist, business-analyst, sales-engineer. These come from the [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) collection or can be custom `.md` files in `~/.claude/agents/`.
+- **macOS** (for sustained campaigns — uses launchd for scheduling. Linux users can substitute cron.)
 
 ## How It Works Internally
 

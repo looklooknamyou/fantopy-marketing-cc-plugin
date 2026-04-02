@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Marketing Pipeline is an autonomous multi-agent system that orchestrates 9+ specialized AI agents to produce complete marketing campaigns from a single command. Agents run in parallel where possible and sequentially where dependencies exist, coordinated by a central Orchestrator running on Opus.
+The Marketing Pipeline is an autonomous multi-agent system that orchestrates 10+ specialized AI agents to produce complete marketing campaigns from a single command. Agents run in parallel where possible and sequentially where dependencies exist, coordinated by a central Orchestrator running on Opus.
 
 ```
 /marketing campaign "Launch an AI-powered project management tool for remote teams"
 ```
 
-One command. Six stages. Nine agents. ~21 deliverables.
+One command. Six stages. Ten agents. ~22 deliverables.
 
 ---
 
@@ -40,17 +40,17 @@ One command. Six stages. Nine agents. ~21 deliverables.
                                  │
                                  ▼
               ┌──────────────────────────────────────────┐
-              │  STAGE 2: RESEARCH  ▸▸▸ 3 IN PARALLEL    │
+              │  STAGE 2: RESEARCH  ▸▸▸ 4 IN PARALLEL    │
               │                                          │
-              │  ┌────────────┐ ┌────────────┐ ┌────────────┐
-              │  │  Market    │ │Competitive │ │  Trend     │
-              │  │ Researcher │ │  Analyst   │ │  Analyst   │
-              │  │  (haiku)   │ │  (haiku)   │ │  (haiku)   │
-              │  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
-              │        ▼              ▼              ▼       │
-              │  market-analysis competitive-  trend-analysis│
-              │      .md        intelligence.md    .md       │
-              └──────────────────┬───────────────────────────┘
+              │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
+              │  │  Market    │ │Competitive │ │  Trend     │ │  Social    │
+              │  │ Researcher │ │  Analyst   │ │  Analyst   │ │ Researcher │
+              │  │  (haiku)   │ │  (haiku)   │ │  (haiku)   │ │ (sonnet)   │
+              │  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
+              │        ▼              ▼              ▼              ▼       │
+              │  market-analysis competitive-  trend-analysis social-      │
+              │      .md        intelligence.md    .md      listening.md   │
+              └──────────────────┬─────────────────────────────────────────┘
                                  │
                           ░░ WAIT ALL ░░
                                  │
@@ -58,7 +58,7 @@ One command. Six stages. Nine agents. ~21 deliverables.
               ┌──────────────────────────────────────────┐
               │  STAGE 3: STRATEGY  ▸▸▸ SEQUENTIAL       │
               │                                          │
-              │  Orchestrator reads all 3 research files   │
+              │  Orchestrator reads all 4 research files   │
               │  and synthesizes:                         │
               │                                          │
               │  → marketing-strategy.md                  │
@@ -129,6 +129,7 @@ One command. Six stages. Nine agents. ~21 deliverables.
 | **Market Researcher** | `market-researcher` | haiku | 2 | Market size, growth trends, buyer behavior, segments |
 | **Competitive Analyst** | `competitive-analyst` | haiku | 2 | Competitor features, pricing, SWOT, positioning |
 | **Trend Analyst** | `trend-analyst` | haiku | 2 | Macro trends, technology shifts, forecasts |
+| **Social Researcher** | `social-researcher` | sonnet | 2 | Reddit, Twitter/X, Telegram scraping, sentiment analysis |
 | **Content Marketer** | `content-marketer` | haiku | 4 | Blog posts, social media, email sequences, landing pages |
 | **SEO Specialist** | `seo-specialist` | haiku | 4 | Keyword research, on-page SEO, link building strategy |
 | **Video Producer** | `general-purpose` | sonnet | 4 | Motion graphics via Remotion (React-based video) |
@@ -143,7 +144,7 @@ One command. Six stages. Nine agents. ~21 deliverables.
 
 ```
 Stage 1      Stage 2           Stage 3      Stage 4                     Stage 5        Stage 6
-[setup]      [3 parallel]      [sequential] [4 parallel]                [2 parallel]   [sequential]
+[setup]      [4 parallel]      [sequential] [4 parallel]                [2 parallel]   [sequential]
 
  ████         ████████████       ██████████   ████████████████████████    ████████████    ████
  ~5s          ~4-5 min           ~10 min      ~30-60 min                 ~13 min         ~5 min
@@ -167,7 +168,8 @@ marketing-output/{campaign-slug}/
 ├── 01-research/
 │   ├── market-analysis.md .................... ~1,000 lines
 │   ├── competitive-intelligence.md ........... ~560 lines
-│   └── trend-analysis.md .................... ~830 lines
+│   ├── trend-analysis.md .................... ~830 lines
+│   └── social-listening.md .................. ~400 lines (Reddit/Twitter/Telegram)
 │
 ├── 02-strategy/
 │   ├── marketing-strategy.md ................. ~740 lines
@@ -254,7 +256,7 @@ Every pipeline run automatically opens a real-time web dashboard at `http://loca
 ├────────────────────────────────────────────────────────────┤
 │  ACTIVITY LOG                                              │
 │  10:30:05  Pipeline started (full-funnel)                  │
-│  10:30:06  Spawning 3 research agents in parallel...       │
+│  10:30:06  Spawning 4 research agents in parallel...       │
 │  10:34:30  All research complete                           │
 │  10:44:19  Strategy synthesis complete                     │
 │  10:44:20  Spawning 4 content agents in parallel...        │
@@ -276,7 +278,7 @@ Campaign Brief
 │ (raw     │     │(synthesized    │(produced │     │(scored & │     │(compiled │
 │  data)   │     │ insights)│     │ assets)  │     │ reviewed)│     │ summary) │
 └─────────┘     └──────────┘     └──────────┘     └──────────┘     └──────────┘
-  3 agents        orchestrator     4 agents         2 agents        orchestrator
+  4 agents        orchestrator     4 agents         2 agents        orchestrator
   parallel        sequential       parallel         parallel        sequential
 ```
 
@@ -286,11 +288,62 @@ Each stage reads the outputs of previous stages. No stage can start until its de
 
 ## Pipeline Modes
 
+### One-Shot Pipelines
+
 | Mode | Command | Agents | Stages | Use Case |
 |------|---------|--------|--------|----------|
-| **Full Funnel** | `/marketing campaign <brief>` | 9 | 6 | Complete campaign from research to review |
-| **Content Production** | `/marketing content <topic>` | 4 | 5 | Blog, social, email, landing page + SEO |
-| **Market Intelligence** | `/marketing research <topic>` | 5 | 4 | Deep research + strategic synthesis |
+| **Full Funnel** | `/marketing campaign <brief>` | 10 | 8 | Complete campaign from research to distribution |
+| **Content Production** | `/marketing content <topic>` | 5 | 5 | Blog, social, email, landing page + SEO |
+| **Market Intelligence** | `/marketing research <topic>` | 6 | 4 | Deep research + strategic synthesis |
+
+### Sustained (Long-Running) Campaigns
+
+| Mode | Command | Agents | Stages | Use Case |
+|------|---------|--------|--------|----------|
+| **Sustained Init** | `/marketing sustain create <brief>` | 4 | 5 | Create recurring campaign: research + strategy + content calendar |
+| **Sustained Batch** | Scheduled via launchd | 4 | 5 | Auto-generate content batch per calendar entry |
+
+**Sustained Campaign Lifecycle:**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    SUSTAINED CAMPAIGN LIFECYCLE                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  CREATE (/marketing sustain create)                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────┐│
+│  │  Setup   │→ │ Research │→ │ Strategy │→ │ Calendar │→ │Config ││
+│  │          │  │ (4 par.) │  │          │  │ Generate │  │      ││
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────┘│
+│       ↓ installs launchd scheduler                                 │
+│                                                                     │
+│  BATCH (auto-triggered on schedule or /marketing sustain run)       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────┐│
+│  │  Setup   │→ │ Research │→ │ Content  │→ │SEO Review│→ │Compile││
+│  │  (brief  │  │ (2 par.) │  │ Creation │  │          │  │      ││
+│  │ from cal)│  └──────────┘  └──────────┘  └──────────┘  └──────┘│
+│       ↓                                                            │
+│  Every N batches → STRATEGY REFRESH (re-run research + synthesis)  │
+│                                                                     │
+│  MANAGEMENT                                                         │
+│  pause / resume / delete / calendar / refresh / history             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Persistent State** (at `~/.marketing-pipeline/campaigns/{slug}/`):
+
+```
+campaign-config.json    ← cadence, content types, total batches (set once)
+campaign-state.json     ← current batch, status, last run (updated each batch)
+content-calendar.json   ← themes + angles per batch (generated from strategy)
+batch-history.json      ← append-only log of completed batches
+run-batch.sh            ← shell script invoked by launchd
+foundation/             ← initial research + active strategy
+batches/batch-NNN/      ← output per batch (same as content-production)
+logs/                   ← per-batch execution logs
+```
+
+**Scheduling**: macOS launchd plist at `~/Library/LaunchAgents/com.marketing-pipeline.sustain.{slug}.plist`. Invokes `claude -p --dangerously-skip-permissions` headlessly to run each batch.
 
 ---
 

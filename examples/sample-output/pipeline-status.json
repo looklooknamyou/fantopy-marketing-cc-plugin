@@ -12,7 +12,8 @@
       "agents": [
         { "name": "Market Researcher", "type": "market-researcher", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:03:45Z" },
         { "name": "Competitive Analyst", "type": "competitive-analyst", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:04:30Z" },
-        { "name": "Trend Analyst", "type": "trend-analyst", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:02:50Z" }
+        { "name": "Trend Analyst", "type": "trend-analyst", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:02:50Z" },
+        { "name": "Social Researcher", "type": "social-researcher", "status": "done", "startTime": "2026-03-25T12:00:06Z", "endTime": "2026-03-25T12:04:10Z" }
       ]
     },
     { "id": "strategy", "name": "Strategy", "status": "done", "startTime": "2026-03-25T12:04:31Z", "endTime": "2026-03-25T12:14:20Z" },
@@ -35,6 +36,7 @@
     { "name": "market-analysis.md", "path": "01-research/market-analysis.md", "size": "42.5 KB", "status": "done" },
     { "name": "competitive-intelligence.md", "path": "01-research/competitive-intelligence.md", "size": "25.8 KB", "status": "done" },
     { "name": "trend-analysis.md", "path": "01-research/trend-analysis.md", "size": "37.3 KB", "status": "done" },
+    { "name": "social-listening.md", "path": "01-research/social-listening.md", "size": "18.7 KB", "status": "done" },
     { "name": "marketing-strategy.md", "path": "02-strategy/marketing-strategy.md", "size": "28.4 KB", "status": "done" },
     { "name": "target-audience.md", "path": "02-strategy/target-audience.md", "size": "27.6 KB", "status": "done" },
     { "name": "blog-post.md", "path": "03-content/blog-posts/ai-pm-remote-teams-blog.md", "size": "12.8 KB", "status": "done" },
@@ -51,9 +53,10 @@
   "activities": [
     { "time": "12:00:00", "message": "Pipeline started (full-funnel)", "level": "info" },
     { "time": "12:00:05", "message": "Setup complete - directories created, brief written", "level": "success" },
-    { "time": "12:00:06", "message": "Spawning 3 research agents in parallel...", "level": "info" },
+    { "time": "12:00:06", "message": "Spawning 4 research agents in parallel...", "level": "info" },
     { "time": "12:02:50", "message": "Trend analysis complete (832 lines)", "level": "success" },
     { "time": "12:03:45", "message": "Market research complete (987 lines)", "level": "success" },
+    { "time": "12:04:10", "message": "Social listening complete (Reddit, Twitter/X, Telegram)", "level": "success" },
     { "time": "12:04:30", "message": "Competitive intelligence complete (563 lines)", "level": "success" },
     { "time": "12:04:31", "message": "Starting strategy synthesis...", "level": "info" },
     { "time": "12:14:20", "message": "Strategy synthesis complete (marketing-strategy.md + target-audience.md)", "level": "success" },
