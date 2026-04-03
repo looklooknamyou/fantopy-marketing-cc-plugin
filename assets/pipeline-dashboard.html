@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>marketing-pipeline</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
       --background-primary: #1e1e1e;
@@ -72,6 +73,43 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      transition: width 0.25s ease;
+    }
+    .workspace-sidebar.collapsed {
+      width: 48px;
+      min-width: 48px;
+    }
+    .workspace-sidebar.collapsed .sidebar-nav-item,
+    .workspace-sidebar.collapsed .sidebar-campaign-item {
+      overflow: hidden;
+      padding: 5px 8px;
+      justify-content: center;
+      text-overflow: clip;
+    }
+    .workspace-sidebar.collapsed .sidebar-nav-item .sidebar-nav-icon {
+      display: none;
+    }
+    .workspace-sidebar.collapsed .sidebar-section-header,
+    .workspace-sidebar.collapsed .sidebar-create-btn {
+      display: none;
+    }
+    .sidebar-collapse-toggle,
+    .sidebar-collapse-btn {
+      width: 24px;
+      height: 24px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .sidebar-collapse-toggle:hover,
+    .sidebar-collapse-btn:hover {
+      color: var(--text-normal);
     }
     .sidebar-header {
       padding: 12px 16px;
@@ -80,6 +118,9 @@
       font-weight: 600;
       color: var(--text-normal);
       letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .sidebar-section {
       padding: 8px 0;
@@ -178,9 +219,25 @@
       height: var(--header-height);
       background: var(--background-primary);
       border-bottom: 1px solid var(--divider-color);
-      padding: 0 8px;
-      gap: 2px;
+      padding: 0 12px;
+      gap: 0;
+      overflow-x: auto;
     }
+    .pipeline-flow-step {
+      display: flex; align-items: center; gap: 6px; padding: 0 10px;
+      font-size: 11px; color: var(--text-faint); white-space: nowrap;
+      font-family: var(--font-ui); height: 100%;
+    }
+    .pipeline-flow-step.active { color: var(--text-accent); font-weight: 600; }
+    .pipeline-flow-step.done { color: var(--text-muted); }
+    .pipeline-flow-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: var(--background-modifier-border);
+    }
+    .pipeline-flow-dot.done { background: var(--interactive-success); }
+    .pipeline-flow-dot.active { background: var(--interactive-accent); animation: pulse-accent 1.5s infinite; }
+    .pipeline-flow-dot.pending { background: var(--background-modifier-border); }
+    .pipeline-flow-arrow { color: var(--text-faint); font-size: 10px; padding: 0 2px; opacity: 0.4; }
     .workspace-tab {
       padding: 6px 16px;
       font-size: 13px;
@@ -371,6 +428,21 @@
     .hub-card-empty p:last-child { color: var(--text-faint); font-size: 12px; margin-top: 8px; }
 
     /* ===================== WIZARD VIEW ===================== */
+    .wizard-type-picker { animation: fade-in 0.3s ease-out; max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+    .wizard-type-title { font-size: 22px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .wizard-type-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    .wizard-type-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .wizard-type-card {
+      background: var(--background-secondary); border: 2px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 28px 24px; cursor: pointer; transition: all 0.2s;
+      text-align: center;
+    }
+    .wizard-type-card:hover { border-color: var(--interactive-accent); background: rgba(127,109,242,0.04); transform: translateY(-2px); }
+    .wizard-type-card-icon { font-size: 36px; margin-bottom: 12px; }
+    .wizard-type-card-name { font-size: 16px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .wizard-type-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; }
+    .wizard-type-card-features { text-align: left; font-size: 11px; color: var(--text-faint); line-height: 1.8; }
+    .wizard-type-card-features span { color: var(--interactive-success); margin-right: 4px; }
     .wizard-view { animation: fade-in 0.3s ease-out; max-width: 600px; margin: 0 auto; }
     .wizard-header {
       text-align: center;
@@ -618,94 +690,96 @@
     .wizard-copied { background: var(--interactive-success); }
 
     /* ===================== CALENDAR VIEW ===================== */
-    .calendar-view { animation: fade-in 0.3s ease-out; }
-    .calendar-funnel-bar {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 20px;
-    }
+    .calendar-view { animation: fade-in 0.3s ease-out; padding: 20px; }
+    .calendar-funnel-bar { display: flex; gap: 4px; margin-bottom: 16px; }
     .calendar-funnel-segment {
-      flex: 1;
-      text-align: center;
-      padding: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      border-radius: var(--radius-s);
+      flex: 1; text-align: center; padding: 8px; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.03em; border-radius: var(--radius-s);
     }
     .calendar-funnel-segment.awareness { background: rgba(127,109,242,0.15); color: var(--text-accent); }
     .calendar-funnel-segment.consideration { background: rgba(38,153,69,0.15); color: var(--text-success); }
     .calendar-funnel-segment.decision { background: rgba(224,160,48,0.15); color: var(--text-warning); }
     .calendar-funnel-segment.retention { background: rgba(224,160,48,0.1); color: #b8880a; }
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 8px;
+    .cal-month-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cal-month-title { font-size: 18px; font-weight: 700; color: var(--text-normal); }
+    .cal-month-nav { display: flex; gap: 6px; }
+    .cal-month-btn {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius-s);
+      cursor: pointer; font-size: 12px; font-family: var(--font-ui); transition: all 0.15s;
     }
-    .calendar-card {
-      background: var(--background-secondary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: var(--radius-m);
-      padding: 14px;
-      cursor: pointer;
-      transition: background 0.15s;
+    .cal-month-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px; }
+    .cal-weekday {
+      text-align: center; font-size: 11px; font-weight: 600; color: var(--text-faint);
+      padding: 6px 0; text-transform: uppercase; letter-spacing: 0.04em;
     }
-    .calendar-card:hover { background: var(--background-secondary-alt); }
-    .calendar-card.completed { border-left: 3px solid var(--interactive-success); }
-    .calendar-card.running { border-left: 3px solid var(--interactive-accent); }
-    .calendar-card-tags {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .cal-cell {
+      min-height: 90px; background: var(--background-secondary);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      padding: 6px 8px; cursor: pointer; transition: all 0.15s; position: relative;
     }
-    .calendar-tag {
-      padding: 2px 8px;
-      font-size: 11px;
-      font-weight: 500;
-      border-radius: var(--radius-s);
+    .cal-cell:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+    .cal-cell.other-month { opacity: 0.3; }
+    .cal-cell.today { border-color: var(--interactive-accent); box-shadow: inset 0 0 0 1px var(--interactive-accent); }
+    .cal-cell.has-items { background: rgba(127,109,242,0.04); }
+    .cal-cell-date { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .cal-cell.today .cal-cell-date { color: var(--text-accent); }
+    .cal-pill {
+      display: block; padding: 2px 6px; margin-bottom: 2px; border-radius: 3px;
+      font-size: 10px; font-weight: 500; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; cursor: pointer; transition: opacity 0.15s;
     }
-    .calendar-tag.funnel-awareness { background: rgba(127,109,242,0.15); color: var(--text-accent); }
-    .calendar-tag.funnel-consideration { background: rgba(38,153,69,0.15); color: var(--text-success); }
-    .calendar-tag.funnel-decision { background: rgba(224,160,48,0.15); color: var(--text-warning); }
-    .calendar-tag.funnel-retention { background: rgba(224,160,48,0.1); color: #b8880a; }
-    .calendar-tag.pillar {
-      background: rgba(255,255,255,0.06);
-      color: var(--text-muted);
+    .cal-pill:hover { opacity: 0.8; }
+    .cal-pill.awareness { background: rgba(127,109,242,0.25); color: #a99bf7; }
+    .cal-pill.consideration { background: rgba(38,153,69,0.25); color: #4cc764; }
+    .cal-pill.decision { background: rgba(224,160,48,0.25); color: #e0a030; }
+    .cal-pill.retention { background: rgba(180,120,20,0.25); color: #c89a20; }
+    .cal-pill.scheduled { background: rgba(79,172,254,0.2); color: #4facfe; }
+    .cal-pill.completed-pill { opacity: 0.5; text-decoration: line-through; }
+    .cal-add-hint {
+      font-size: 18px; color: var(--text-faint); opacity: 0; text-align: center;
+      margin-top: 2px; transition: opacity 0.15s;
     }
-    .calendar-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
+    .cal-cell:hover .cal-add-hint { opacity: 0.5; }
+    .cal-popover-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1500; }
+    .cal-popover {
+      position: fixed; z-index: 1501; background: var(--background-primary-alt);
+      border: 1px solid var(--interactive-accent); border-radius: var(--radius-m);
+      padding: 18px 20px; width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
     }
-    .calendar-card-batch {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
+    .cal-popover-title {
+      font-size: 14px; font-weight: 600; color: var(--text-normal); margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .calendar-card-status {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--text-faint);
+    .cal-popover-close { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; }
+    .cal-popover-close:hover { color: var(--text-error); }
+    .cal-popover-field { margin-bottom: 12px; }
+    .cal-popover-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 0.03em;
     }
-    .calendar-card-status.completed { background: var(--interactive-success); }
-    .calendar-card-status.running { background: var(--interactive-accent); }
-    .calendar-card-theme {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-normal);
-      margin-bottom: 4px;
+    .cal-popover-select, .cal-popover-time {
+      width: 100%; padding: 8px 10px; background: var(--background-modifier-form-field);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      color: var(--text-normal); font-size: 13px; font-family: var(--font-ui);
     }
-    .calendar-card-date {
-      font-size: 12px;
-      color: var(--text-faint);
+    .cal-popover-select:focus, .cal-popover-time:focus { outline: none; border-color: var(--interactive-accent); }
+    .cal-popover-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cal-popover-check {
+      font-size: 11px; padding: 4px 10px; border-radius: 12px; cursor: pointer;
+      border: 1px solid var(--background-modifier-border); background: transparent;
+      color: var(--text-muted); font-family: var(--font-ui); transition: all 0.15s;
     }
-    .calendar-card-expand {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid var(--divider-color);
-      font-size: 11px;
-      color: var(--text-faint);
+    .cal-popover-check.active { border-color: var(--interactive-accent); background: var(--tag-background); color: var(--text-accent); }
+    .cal-popover-submit {
+      width: 100%; padding: 9px; background: var(--interactive-accent); color: var(--text-on-accent);
+      border: none; border-radius: var(--radius-s); font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: var(--font-ui); transition: background 0.15s;
     }
+    .cal-popover-submit:hover { background: var(--interactive-accent-hover); }
 
     /* ===================== BATCH DETAIL PANEL ===================== */
     .batch-detail-panel {
@@ -848,96 +922,532 @@
     .history-status.running { background: rgba(127,109,242,0.15); color: var(--text-accent); }
     .history-status.pending { background: rgba(255,255,255,0.06); color: var(--text-faint); }
 
-    /* ===================== COMMAND TOAST ===================== */
-    .command-toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--background-primary-alt);
-      border: 1px solid var(--background-modifier-border);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-      border-radius: var(--radius-m);
-      padding: 16px 20px;
-      z-index: 2000;
-      transition: transform 0.25s ease-out;
-      max-width: 560px;
-      width: 90vw;
+    /* ===================== COPY NOTIFICATION ===================== */
+    .copy-notify {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px);
+      background: var(--interactive-success); color: #fff; padding: 10px 20px;
+      border-radius: var(--radius-s); font-size: 13px; font-weight: 500;
+      z-index: 2000; transition: transform 0.25s ease-out; pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    .command-toast.show { transform: translateX(-50%) translateY(0); }
-    .command-toast-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
+    .copy-notify.show { transform: translateX(-50%) translateY(0); }
+
+    /* ===================== STORAGE VIEW ===================== */
+    .storage-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .storage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .storage-title { font-size: 20px; font-weight: 700; color: var(--text-normal); }
+    .storage-campaign-tabs {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;
+      border-bottom: 1px solid var(--divider-color); padding-bottom: 8px;
     }
-    .command-toast-title {
+    .storage-campaign-tab {
+      padding: 6px 14px; font-size: 12px; border: none; border-radius: var(--radius-s);
+      background: transparent; color: var(--text-muted); cursor: pointer;
+      font-family: var(--font-ui); transition: all 0.15s;
+    }
+    .storage-campaign-tab:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+    .storage-campaign-tab.active { background: var(--interactive-accent); color: var(--text-on-accent); }
+    .storage-category-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .storage-chip {
+      padding: 4px 12px; font-size: 11px; border: 1px solid var(--background-modifier-border);
+      border-radius: 20px; background: transparent; color: var(--text-muted);
+      cursor: pointer; font-family: var(--font-ui); text-transform: capitalize; transition: all 0.15s;
+    }
+    .storage-chip:hover { border-color: var(--text-accent); color: var(--text-normal); }
+    .storage-chip.active { background: var(--tag-background); border-color: var(--interactive-accent); color: var(--text-accent); }
+    .storage-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px; margin-bottom: 80px;
+    }
+    .storage-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 14px 16px; cursor: pointer;
+      transition: all 0.15s; position: relative;
+    }
+    .storage-card:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+    .storage-card.selected { border-color: var(--interactive-accent); background: rgba(127,109,242,0.08); }
+    .storage-card.selected::before {
+      content: '\2713'; position: absolute; top: 8px; right: 10px;
+      color: var(--interactive-accent); font-size: 14px; font-weight: 700;
+    }
+    .storage-card-name { font-size: 13px; font-weight: 600; color: var(--text-normal); margin-bottom: 6px; word-break: break-word; }
+    .storage-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .storage-card-badge {
+      display: inline-block; padding: 2px 8px; font-size: 10px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600;
+    }
+    .storage-card-badge.research { background: rgba(79,172,254,0.15); color: #4facfe; }
+    .storage-card-badge.strategy { background: rgba(127,109,242,0.15); color: #7f6df2; }
+    .storage-card-badge.content { background: rgba(38,153,69,0.15); color: #269945; }
+    .storage-card-badge.seo { background: rgba(224,160,48,0.15); color: #e0a030; }
+    .storage-card-badge.review { background: rgba(238,56,36,0.15); color: #ee3824; }
+    .storage-card-badge.brief { background: rgba(153,153,153,0.15); color: #999; }
+    .storage-card-badge.final { background: rgba(153,153,153,0.15); color: #999; }
+    .storage-card-badge.distribution { background: rgba(224,160,48,0.15); color: #e0a030; }
+    .storage-card-badge.other { background: rgba(153,153,153,0.15); color: #999; }
+    .storage-card-campaign {
+      font-size: 10px; color: var(--text-faint); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; max-width: 140px;
+    }
+    .storage-card-size { font-size: 10px; color: var(--text-faint); margin-left: auto; }
+    .storage-card-path { font-size: 11px; color: var(--text-faint); margin-top: 6px; font-family: var(--font-mono); word-break: break-all; }
+    .storage-actions-bar {
+      position: fixed; bottom: 0; left: var(--sidebar-width); right: 0;
+      background: var(--background-primary-alt); border-top: 1px solid var(--interactive-accent);
+      padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+      z-index: 500; transform: translateY(100%); transition: transform 0.2s ease;
+    }
+    .storage-actions-bar.show { transform: translateY(0); }
+    .storage-actions-count { font-size: 13px; color: var(--text-normal); }
+    .storage-actions-count strong { color: var(--text-accent); }
+    .storage-actions-btns { display: flex; gap: 8px; }
+    .storage-action-btn {
+      padding: 8px 18px; font-size: 13px; font-weight: 500; border-radius: var(--radius-s);
+      border: none; cursor: pointer; font-family: var(--font-ui); transition: all 0.15s;
+    }
+    .storage-action-btn.primary { background: var(--interactive-accent); color: var(--text-on-accent); }
+    .storage-action-btn.primary:hover { background: var(--interactive-accent-hover); }
+    .storage-action-btn.secondary { background: transparent; border: 1px solid var(--background-modifier-border); color: var(--text-muted); }
+    .storage-action-btn.secondary:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+    .storage-empty { padding: 60px 20px; text-align: center; color: var(--text-faint); }
+    .storage-empty h3 { font-size: 16px; color: var(--text-muted); margin-bottom: 8px; }
+
+    /* ===================== STAGING AREA VIEW ===================== */
+    .staging-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .staging-title { font-size: 20px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .staging-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+    .staging-connectors { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .staging-connector {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 24px; transition: border-color 0.15s;
+    }
+    .staging-connector:hover { border-color: rgba(255,255,255,0.15); }
+    .staging-connector-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .staging-connector-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-m); display: flex;
+      align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    }
+    .staging-connector-icon.drive { background: rgba(66,133,244,0.15); }
+    .staging-connector-icon.telegram { background: rgba(38,166,222,0.15); }
+    .staging-connector-name { font-size: 16px; font-weight: 600; color: var(--text-normal); }
+    .staging-connector-desc { font-size: 12px; color: var(--text-faint); }
+    .staging-connector-body { margin-bottom: 16px; }
+    .staging-connector-status {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
       font-size: 12px;
-      font-weight: 600;
-      color: var(--text-normal);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
     }
-    .command-toast-close {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-size: 18px;
+    .staging-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .staging-status-dot.connected { background: var(--interactive-success); }
+    .staging-status-dot.disconnected { background: var(--text-error); }
+    .staging-connector-field { margin-bottom: 10px; }
+    .staging-field-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .staging-field-input {
+      width: 100%; padding: 8px 10px; background: var(--background-modifier-form-field);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      color: var(--text-normal); font-size: 13px; font-family: var(--font-ui);
+    }
+    .staging-field-input:focus { outline: none; border-color: var(--interactive-accent); }
+    .staging-field-hint { font-size: 10px; color: var(--text-faint); margin-top: 3px; }
+    .staging-connector-actions { display: flex; gap: 8px; }
+    .staging-btn {
+      padding: 8px 18px; font-size: 13px; font-weight: 500; border-radius: var(--radius-s);
+      border: none; cursor: pointer; font-family: var(--font-ui); transition: all 0.15s;
+    }
+    .staging-btn.primary { background: var(--interactive-accent); color: var(--text-on-accent); }
+    .staging-btn.primary:hover { background: var(--interactive-accent-hover); }
+    .staging-btn.secondary {
+      background: transparent; border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+    }
+    .staging-btn.secondary:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+    .staging-btn.success { background: var(--interactive-success); color: #fff; }
+    .staging-btn.danger { background: transparent; border: 1px solid rgba(238,56,36,0.3); color: var(--text-error); }
+    .staging-btn.danger:hover { background: rgba(238,56,36,0.1); }
+    .staging-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .staging-saved-msg {
+      font-size: 12px; color: var(--interactive-success); margin-left: 8px;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .staging-saved-msg.show { opacity: 1; }
+    .staging-how-section {
+      margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--divider-color);
+    }
+    .staging-how-title { font-size: 14px; font-weight: 600; color: var(--text-normal); margin-bottom: 12px; }
+    .staging-how-steps {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+    }
+    .staging-how-step {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-s); padding: 14px;
+    }
+    .staging-how-step-num {
+      font-size: 20px; font-weight: 700; color: var(--interactive-accent); margin-bottom: 4px;
+    }
+    .staging-how-step-text { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    /* Staging review queue */
+    .staging-tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--divider-color); }
+    .staging-tab {
+      padding: 8px 18px; font-size: 13px; font-weight: 500; border: none; background: transparent;
+      color: var(--text-muted); cursor: pointer; font-family: var(--font-ui);
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .staging-tab:hover { color: var(--text-normal); }
+    .staging-tab.active { color: var(--text-accent); border-bottom-color: var(--interactive-accent); }
+    .staging-tab-badge {
+      display: inline-block; margin-left: 6px; padding: 1px 7px; font-size: 10px;
+      border-radius: 10px; font-weight: 600; background: var(--tag-background); color: var(--text-accent);
+    }
+    .staging-review-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .staging-review-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); overflow: hidden; transition: border-color 0.15s;
+    }
+    .staging-review-card:hover { border-color: rgba(255,255,255,0.15); }
+    .staging-review-card.approved { border-left: 3px solid var(--interactive-success); }
+    .staging-review-card.rejected { border-left: 3px solid var(--text-error); opacity: 0.6; }
+    .staging-review-header {
+      padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;
       cursor: pointer;
     }
-    .command-toast-close:hover { color: var(--text-error); }
-    .command-toast-body {
-      background: rgba(0,0,0,0.2);
-      padding: 12px;
+    .staging-review-header:hover { background: var(--background-modifier-hover); }
+    .staging-review-info { display: flex; align-items: center; gap: 10px; }
+    .staging-review-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .staging-review-status-dot.pending { background: var(--text-warning); }
+    .staging-review-status-dot.approved { background: var(--interactive-success); }
+    .staging-review-status-dot.rejected { background: var(--text-error); }
+    .staging-review-name { font-size: 14px; font-weight: 600; color: var(--text-normal); }
+    .staging-review-meta { font-size: 11px; color: var(--text-faint); }
+    .staging-review-badge {
+      font-size: 10px; padding: 3px 10px; border-radius: 10px; font-weight: 600; text-transform: uppercase;
+    }
+    .staging-review-badge.pending { background: rgba(224,160,48,0.15); color: var(--text-warning); }
+    .staging-review-badge.approved { background: rgba(38,153,69,0.15); color: var(--interactive-success); }
+    .staging-review-badge.rejected { background: rgba(238,56,36,0.15); color: var(--text-error); }
+    .staging-review-body { padding: 0 18px 14px; }
+    .staging-review-body.collapsed { display: none; }
+    .staging-review-deliverables {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px;
       margin-bottom: 12px;
-      border-radius: var(--radius-s);
     }
-    .command-toast-command {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--text-accent);
-      word-break: break-all;
+    .staging-review-file {
+      font-size: 12px; color: var(--text-muted); padding: 6px 10px;
+      background: rgba(0,0,0,0.15); border-radius: var(--radius-s);
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .command-toast-actions { display: flex; gap: 8px; }
-    .command-toast-btn {
-      background: var(--interactive-accent);
-      border: none;
-      color: var(--text-on-accent);
-      padding: 8px 20px;
-      font-size: 13px;
-      font-weight: 500;
-      border-radius: var(--radius-s);
-      cursor: pointer;
-      font-family: var(--font-ui);
+    .staging-review-file-size { font-size: 10px; color: var(--text-faint); }
+    .staging-review-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .staging-approve-btn {
+      padding: 7px 20px; font-size: 12px; font-weight: 600; border: none; border-radius: var(--radius-s);
+      cursor: pointer; font-family: var(--font-ui); transition: all 0.15s;
+    }
+    .staging-approve-btn.approve { background: var(--interactive-success); color: #fff; }
+    .staging-approve-btn.approve:hover { background: #2eb050; }
+    .staging-approve-btn.reject { background: transparent; border: 1px solid rgba(238,56,36,0.3); color: var(--text-error); }
+    .staging-approve-btn.reject:hover { background: rgba(238,56,36,0.1); }
+    .staging-approve-btn.view { background: transparent; border: 1px solid var(--background-modifier-border); color: var(--text-muted); }
+    .staging-approve-btn.view:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+    .staging-review-empty {
+      padding: 40px; text-align: center; color: var(--text-faint); font-size: 13px;
+      border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m);
+    }
+    .staging-section-divider {
+      margin: 32px 0; border-top: 1px solid var(--divider-color);
+      padding-top: 24px;
+    }
+    .staging-section-title { font-size: 16px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .staging-section-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+
+    /* ===================== SOCIAL INTEGRATIONS VIEW ===================== */
+    .social-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .social-title { font-size: 20px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .social-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+    .social-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .social-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 20px; transition: border-color 0.15s;
+    }
+    .social-card:hover { border-color: rgba(255,255,255,0.15); }
+    .social-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .social-card-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-m); display: flex;
+      align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .social-card-icon.reddit { background: rgba(255,69,0,0.15); }
+    .social-card-icon.twitter { background: rgba(29,161,242,0.15); }
+    .social-card-icon.telegram { background: rgba(38,166,222,0.15); }
+    .social-card-icon.discord { background: rgba(88,101,242,0.15); }
+    .social-card-icon.drive { background: rgba(66,133,244,0.15); }
+    .social-card-name { font-size: 15px; font-weight: 600; color: var(--text-normal); }
+    .social-card-desc { font-size: 11px; color: var(--text-faint); }
+    .social-card-status { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12px; }
+
+    /* ===================== BRAINSTORM VIEW ===================== */
+    .brainstorm-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .brainstorm-title { font-size: 20px; font-weight: 700; color: var(--text-normal); margin-bottom: 20px; }
+    .brainstorm-section { margin-bottom: 24px; }
+    .brainstorm-section-header {
+      font-size: 13px; font-weight: 600; color: var(--text-normal); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .brainstorm-section-hint { font-size: 11px; color: var(--text-faint); font-weight: 400; }
+    .brainstorm-group {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); margin-bottom: 8px; overflow: hidden;
+    }
+    .brainstorm-group-header {
+      padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; font-size: 12px; font-weight: 600; color: var(--text-muted);
       transition: background 0.15s;
     }
-    .command-toast-btn:hover { background: var(--interactive-accent-hover); }
-    .command-toast-copied { background: var(--interactive-success); }
+    .brainstorm-group-header:hover { background: var(--background-modifier-hover); }
+    .brainstorm-group-arrow { transition: transform 0.2s; font-size: 10px; }
+    .brainstorm-group-arrow.open { transform: rotate(90deg); }
+    .brainstorm-group-body { padding: 0 14px 10px; }
+    .brainstorm-group-body.collapsed { display: none; }
+    .brainstorm-check-row {
+      display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px;
+      color: var(--text-normal); cursor: pointer;
+    }
+    .brainstorm-check-row:hover { color: var(--text-accent); }
+    .brainstorm-check-row input[type="checkbox"] { accent-color: var(--interactive-accent); }
+    .brainstorm-check-badge {
+      font-size: 9px; padding: 1px 6px; border-radius: 8px; text-transform: uppercase;
+    }
+    .brainstorm-check-badge.research { background: rgba(79,172,254,0.15); color: #4facfe; }
+    .brainstorm-check-badge.strategy { background: rgba(127,109,242,0.15); color: #7f6df2; }
+    .brainstorm-check-badge.seo { background: rgba(224,160,48,0.15); color: #e0a030; }
+    .brainstorm-types-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .brainstorm-type-option {
+      display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-s); font-size: 12px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .brainstorm-type-option:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
+    .brainstorm-type-option.selected { border-color: var(--interactive-accent); background: var(--tag-background); color: var(--text-accent); }
+    .brainstorm-type-option input { accent-color: var(--interactive-accent); }
+    .brainstorm-brief-input {
+      width: 100%; padding: 12px; background: var(--background-modifier-form-field);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      color: var(--text-normal); font-family: var(--font-ui); font-size: 13px;
+      resize: vertical; min-height: 80px;
+    }
+    .brainstorm-brief-input:focus { outline: none; border-color: var(--interactive-accent); }
+    .brainstorm-generate-btn {
+      padding: 10px 28px; font-size: 14px; font-weight: 600; border: none;
+      border-radius: var(--radius-s); background: var(--interactive-accent);
+      color: var(--text-on-accent); cursor: pointer; font-family: var(--font-ui);
+      transition: background 0.15s;
+    }
+    .brainstorm-generate-btn:hover { background: var(--interactive-accent-hover); }
+    .brainstorm-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .brainstorm-gallery-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+    }
+    .brainstorm-media-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); overflow: hidden; transition: border-color 0.15s;
+    }
+    .brainstorm-media-card:hover { border-color: var(--interactive-accent); }
+    .brainstorm-media-card img {
+      width: 100%; height: 160px; object-fit: cover; cursor: pointer; display: block;
+    }
+    .brainstorm-media-card video {
+      width: 100%; height: 160px; object-fit: cover; display: block; background: #000;
+    }
+    .brainstorm-media-info { padding: 10px 12px; }
+    .brainstorm-media-name { font-size: 12px; font-weight: 600; color: var(--text-normal); margin-bottom: 4px; }
+    .brainstorm-media-meta { font-size: 10px; color: var(--text-faint); display: flex; justify-content: space-between; }
+    .brainstorm-lightbox {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000;
+      display: flex; align-items: center; justify-content: center; cursor: zoom-out;
+    }
+    .brainstorm-lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius-m); }
+    .brainstorm-gallery-empty {
+      padding: 30px; text-align: center; color: var(--text-faint); font-size: 13px;
+      border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m);
+    }
+    .brainstorm-model-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+    .brainstorm-model-card {
+      flex: 1; min-width: 200px; padding: 14px 16px; background: var(--background-secondary);
+      border: 2px solid var(--background-modifier-border); border-radius: var(--radius-m);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .brainstorm-model-card:hover { border-color: rgba(255,255,255,0.15); }
+    .brainstorm-model-card.selected { border-color: var(--interactive-accent); background: rgba(127,109,242,0.06); }
+    .brainstorm-model-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .brainstorm-model-card-name { font-size: 14px; font-weight: 600; color: var(--text-normal); }
+    .brainstorm-model-card-badge {
+      font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 600; text-transform: uppercase;
+    }
+    .brainstorm-model-card-badge.connected { background: rgba(38,153,69,0.15); color: var(--interactive-success); }
+    .brainstorm-model-card-badge.no-key { background: rgba(238,56,36,0.15); color: var(--text-error); }
+    .brainstorm-model-card-desc { font-size: 11px; color: var(--text-faint); margin-bottom: 8px; }
+    .brainstorm-model-card-models { font-size: 11px; color: var(--text-muted); }
+    .brainstorm-model-select {
+      width: 100%; padding: 6px 8px; margin-top: 6px; background: var(--background-modifier-form-field);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      color: var(--text-normal); font-size: 12px; font-family: var(--font-ui);
+    }
+    .brainstorm-model-select:focus { outline: none; border-color: var(--interactive-accent); }
+
+    /* ===================== REVIEW VIEW ===================== */
+    .review-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .review-title { font-size: 20px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .review-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .review-campaign-select {
+      width: 100%; max-width: 400px; padding: 8px 10px; margin-bottom: 16px;
+      background: var(--background-modifier-form-field); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-s); color: var(--text-normal); font-size: 13px; font-family: var(--font-ui);
+    }
+    .review-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px; margin-bottom: 80px;
+    }
+    .review-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); overflow: hidden; cursor: pointer; transition: all 0.15s;
+      position: relative;
+    }
+    .review-card:hover { border-color: var(--interactive-accent); }
+    .review-card.selected { border-color: var(--interactive-accent); background: rgba(127,109,242,0.06); }
+    .review-card.selected::after {
+      content: '\2713'; position: absolute; top: 8px; right: 10px;
+      color: var(--interactive-accent); font-size: 16px; font-weight: 700;
+    }
+    .review-card-preview {
+      padding: 10px 14px; font-size: 11px; color: var(--text-faint); line-height: 1.5;
+      max-height: 80px; overflow: hidden; font-family: var(--font-mono);
+      background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--background-modifier-border);
+    }
+    .review-card-preview img { width: 100%; height: 120px; object-fit: cover; display: block; }
+    .review-card-preview video { width: 100%; height: 120px; object-fit: cover; display: block; background: #000; }
+    .review-card-info { padding: 10px 14px; }
+    .review-card-name { font-size: 13px; font-weight: 600; color: var(--text-normal); margin-bottom: 4px; }
+    .review-card-meta { display: flex; align-items: center; gap: 6px; }
+    .review-actions-bar {
+      position: fixed; bottom: 0; left: var(--sidebar-width); right: 0;
+      background: var(--background-primary-alt); border-top: 1px solid var(--interactive-accent);
+      padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+      z-index: 500; transform: translateY(100%); transition: transform 0.2s ease;
+    }
+    .review-actions-bar.show { transform: translateY(0); }
+
+    /* Calendar queue panel */
+    .cal-layout { display: flex; gap: 0; }
+    .cal-main { flex: 1; }
+    .cal-queue {
+      width: 260px; min-width: 260px; border-left: 1px solid var(--divider-color);
+      padding: 12px; overflow-y: auto; max-height: calc(100vh - 200px);
+    }
+    .cal-queue-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.03em; }
+    .cal-queue-item {
+      padding: 8px 10px; margin-bottom: 4px; background: var(--background-secondary);
+      border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+      font-size: 11px; cursor: pointer; transition: all 0.15s;
+    }
+    .cal-queue-item:hover { border-color: var(--interactive-accent); }
+    .cal-queue-item.active { border-color: var(--interactive-accent); background: var(--tag-background); }
+    .cal-queue-item-name { font-weight: 600; color: var(--text-normal); margin-bottom: 2px; }
+    .cal-queue-item-meta { color: var(--text-faint); font-size: 10px; }
+    .cal-queue-empty { padding: 20px; text-align: center; color: var(--text-faint); font-size: 11px; }
+    .cal-auto-btn {
+      width: 100%; padding: 8px; margin-bottom: 12px; font-size: 11px; font-weight: 600;
+      background: var(--interactive-accent); color: var(--text-on-accent); border: none;
+      border-radius: var(--radius-s); cursor: pointer; font-family: var(--font-ui);
+    }
+    .cal-auto-btn:hover { background: var(--interactive-accent-hover); }
+
+    /* History campaign filters */
+    .history-filters { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--divider-color); }
+    .history-filter-tab {
+      padding: 8px 16px; font-size: 13px; font-weight: 500; border: none; background: transparent;
+      color: var(--text-muted); cursor: pointer; font-family: var(--font-ui);
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .history-filter-tab:hover { color: var(--text-normal); }
+    .history-filter-tab.active { color: var(--text-accent); border-bottom-color: var(--interactive-accent); }
+    .history-campaigns { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .history-campaign-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 14px; transition: border-color 0.15s;
+    }
+    .history-campaign-card:hover { border-color: rgba(255,255,255,0.15); }
+    .history-campaign-name { font-size: 14px; font-weight: 600; color: var(--text-normal); margin-bottom: 4px; }
+    .history-campaign-meta { font-size: 11px; color: var(--text-faint); display: flex; gap: 8px; align-items: center; }
 
     /* ===================== MONITOR VIEW ===================== */
-    .sustain-panel-view { animation: fade-in 0.3s ease-out; }
-    .sustain-header { margin-bottom: 20px; }
-    .sustain-title { font-size: 20px; font-weight: 700; color: var(--text-normal); }
-    .sustain-sections { display: flex; flex-direction: column; gap: 12px; }
-    .sustain-section {
-      background: var(--background-secondary);
-      border: 1px solid var(--background-modifier-border);
-      border-radius: var(--radius-m);
-      padding: 16px;
+    .monitor-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .monitor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .monitor-title { font-size: 20px; font-weight: 700; color: var(--text-normal); }
+    .monitor-status-badge {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.03em;
     }
-    .sustain-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
+    .monitor-status-badge.running { background: rgba(127,109,242,0.15); color: var(--text-accent); }
+    .monitor-status-badge.done, .monitor-status-badge.complete { background: rgba(38,153,69,0.15); color: var(--interactive-success); }
+    .monitor-status-badge.pending { background: rgba(224,160,48,0.15); color: var(--text-warning); }
+    .monitor-status-badge.failed { background: rgba(238,56,36,0.15); color: var(--text-error); }
+    .monitor-status-badge.awaiting_approval { background: rgba(224,160,48,0.15); color: var(--text-warning); }
+    .monitor-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;
     }
-    .sustain-status, .sustain-progress, .sustain-next-run {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text-normal);
+    .monitor-stat {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 16px; text-align: center;
     }
+    .monitor-stat-value { font-size: 24px; font-weight: 700; color: var(--text-accent); margin-bottom: 4px; }
+    .monitor-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .monitor-progress-section { margin-bottom: 24px; }
+    .monitor-progress-bar {
+      width: 100%; height: 8px; background: var(--background-modifier-border);
+      border-radius: 4px; overflow: hidden; margin-bottom: 8px;
+    }
+    .monitor-progress-fill {
+      height: 100%; background: var(--interactive-accent); border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .monitor-progress-fill.complete { background: var(--interactive-success); }
+    .monitor-progress-text { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .monitor-stages { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+    .monitor-stage {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-s); transition: all 0.2s;
+    }
+    .monitor-stage.active { border-color: var(--interactive-accent); background: rgba(127,109,242,0.04); }
+    .monitor-stage.done { opacity: 0.7; }
+    .monitor-stage-icon { font-size: 16px; width: 24px; text-align: center; }
+    .monitor-stage-name { font-size: 13px; font-weight: 600; color: var(--text-normal); flex: 1; }
+    .monitor-stage-status { font-size: 11px; font-weight: 500; }
+    .monitor-stage-status.done { color: var(--interactive-success); }
+    .monitor-stage-status.running { color: var(--text-accent); }
+    .monitor-stage-status.pending { color: var(--text-faint); }
+    .monitor-stage-status.failed { color: var(--text-error); }
+    .monitor-stage-agents { font-size: 10px; color: var(--text-faint); }
+    .monitor-stage-time { font-size: 10px; color: var(--text-faint); min-width: 60px; text-align: right; }
+    .monitor-activity { margin-top: 20px; }
+    .monitor-activity-title { font-size: 13px; font-weight: 600; color: var(--text-normal); margin-bottom: 10px; }
+    .monitor-log {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 12px; max-height: 200px; overflow-y: auto;
+      font-family: var(--font-mono); font-size: 11px;
+    }
+    .monitor-log-entry { padding: 2px 0; color: var(--text-muted); }
+    .monitor-log-entry.success { color: var(--interactive-success); }
+    .monitor-log-entry.error { color: var(--text-error); }
+    .monitor-log-entry .log-time { color: var(--text-faint); margin-right: 8px; }
+    .monitor-empty {
+      text-align: center; padding: 60px 20px; color: var(--text-faint);
+    }
+    .monitor-empty h3 { font-size: 16px; color: var(--text-muted); margin-bottom: 8px; }
+    @keyframes pulse-accent { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     /* ===================== ANIMATIONS ===================== */
     @keyframes fade-in {
@@ -967,19 +1477,17 @@
     </div>
   </div>
 
-  <!-- Command Toast -->
-  <div id="command-toast" class="command-toast">
-    <div class="command-toast-header">
-      <span class="command-toast-title" id="toast-title">Command</span>
-      <button class="command-toast-close" onclick="hideToast()">&times;</button>
-    </div>
-    <div class="command-toast-body">
-      <div class="command-toast-command" id="toast-command"></div>
-    </div>
-    <div class="command-toast-actions">
-      <button class="command-toast-btn" id="toast-btn" onclick="copyCommand()">Copy</button>
+  <!-- Storage Actions Bar -->
+  <div id="storage-actions-bar" class="storage-actions-bar">
+    <span class="storage-actions-count"><strong id="storage-selected-count">0</strong> files selected</span>
+    <div class="storage-actions-btns">
+      <button class="storage-action-btn secondary" onclick="clearStorageSelection()">Clear</button>
+      <button class="storage-action-btn primary" onclick="generateFromSelected()">Generate Content from Selected</button>
     </div>
   </div>
+
+  <!-- Copy Notification -->
+  <div id="copy-notify" class="copy-notify"></div>
 
   <!-- Batch Detail Panel -->
   <div id="batch-detail-overlay" class="batch-detail-overlay" onclick="closeBatchDetail()"></div>
@@ -992,6 +1500,82 @@
   </div>
 
   <script>
+    // ===================== CLOUD API =====================
+    const cloudAPI = {
+      apiUrl: 'http://localhost:3847',
+      apiKey: null,
+      teamId: null,
+      supabase: null,
+      user: null,
+      connected: false,
+
+      async init(apiKey, teamId, supabaseUrl, supabaseKey) {
+        this.apiKey = apiKey;
+        this.teamId = teamId;
+        if (supabaseUrl && supabaseKey && window.supabase) {
+          this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+        try {
+          const r = await fetch(this.apiUrl + '/api/auth/me', { headers: this.headers() });
+          if (!r.ok) return false;
+          this.user = await r.json();
+          this.connected = true;
+          return true;
+        } catch (e) { this.connected = false; return false; }
+      },
+
+      headers() { return { 'x-api-key': this.apiKey, 'Content-Type': 'application/json' }; },
+
+      async listCampaigns() {
+        try { const r = await fetch(this.apiUrl + '/api/campaigns?team_id=' + this.teamId, { headers: this.headers() }); if (!r.ok) return []; const data = await r.json(); return data.campaigns || data || []; } catch (e) { return []; }
+      },
+      async getCampaign(id) {
+        try { const r = await fetch(this.apiUrl + '/api/campaigns/' + id, { headers: this.headers() }); if (!r.ok) return null; return r.json(); } catch (e) { return null; }
+      },
+      async createCampaign(slug, name, mode) {
+        try { const r = await fetch(this.apiUrl + '/api/campaigns', { method: 'POST', headers: this.headers(), body: JSON.stringify({ team_id: this.teamId, slug, name, mode }) }); if (!r.ok) return null; return r.json(); } catch (e) { return null; }
+      },
+      async updateStatus(campaignId, pipelineStatus) {
+        try { const r = await fetch(this.apiUrl + '/api/campaigns/' + campaignId + '/status', { method: 'PUT', headers: this.headers(), body: JSON.stringify({ pipeline_status: pipelineStatus }) }); return r.ok; } catch (e) { return false; }
+      },
+      async getApproval(campaignId) {
+        try { const r = await fetch(this.apiUrl + '/api/approval/' + campaignId, { headers: this.headers() }); if (!r.ok) return null; return r.json(); } catch (e) { return null; }
+      },
+      async approveAll(campaignId) {
+        try { return fetch(this.apiUrl + '/api/approval/' + campaignId, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ action: 'approve_all' }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async rejectAll(campaignId) {
+        try { return fetch(this.apiUrl + '/api/approval/' + campaignId, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ action: 'reject_all' }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async approveItem(campaignId, deliverable) {
+        try { return fetch(this.apiUrl + '/api/approval/' + campaignId, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ action: 'approve_item', deliverable }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async rejectItem(campaignId, deliverable) {
+        try { return fetch(this.apiUrl + '/api/approval/' + campaignId, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ action: 'reject_item', deliverable }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async getTeamMembers() {
+        try { const r = await fetch(this.apiUrl + '/api/teams/' + this.teamId + '/members', { headers: this.headers() }); if (!r.ok) return []; const data = await r.json(); return data.members || data || []; } catch (e) { return []; }
+      },
+      async getDistConfig() {
+        try { const r = await fetch(this.apiUrl + '/api/distribution/config/raw', { headers: this.headers() }); if (!r.ok) return {}; return r.json(); } catch (e) { return {}; }
+      },
+      async saveDistConfig(platform, config) {
+        try { return fetch(this.apiUrl + '/api/distribution/config/' + platform, { method: 'PUT', headers: this.headers(), body: JSON.stringify(config) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async testDistPlatform(platform) {
+        try { const r = await fetch(this.apiUrl + '/api/distribution/test/' + platform, { method: 'POST', headers: this.headers() }); if (!r.ok) return { success: false, message: 'Server error' }; return r.json(); } catch (e) { return { success: false, message: 'Connection failed' }; }
+      },
+
+      subscribeToUpdates(campaignId, callback) {
+        if (!this.supabase) return null;
+        return this.supabase.channel('campaign-' + campaignId)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'campaigns', filter: 'id=eq.' + campaignId }, payload => callback(payload.new))
+          .subscribe();
+      }
+    };
+
+    window.isCloudMode = false;
+
     // ===================== STATE =====================
     let currentView = null;
     let currentCampaign = null;
@@ -1017,7 +1601,9 @@
         cloud: params.get('cloud'),
         campaign_id: params.get('campaign_id'),
         supabase_url: params.get('supabase_url'),
-        supabase_key: params.get('supabase_key')
+        supabase_key: params.get('supabase_key'),
+        api_key: params.get('api_key'),
+        team_id: params.get('team_id')
       };
     }
 
@@ -1035,30 +1621,54 @@
     function renderSidebar() {
       const sidebar = document.getElementById('workspace-sidebar');
       sidebar.innerHTML = `
-        <div class="sidebar-header">marketing-pipeline</div>
+        <div class="sidebar-header">
+          <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+          marketing-pipeline
+        </div>
         <div class="sidebar-section">
-          <div class="sidebar-section-header">Navigation</div>
+          <div class="sidebar-section-header">Views</div>
           <button class="sidebar-nav-item" data-nav="hub" onclick="switchView('hub')">
-            <span class="sidebar-nav-icon">\u2302</span> Campaigns
+            <span class="sidebar-nav-icon">\u25CB</span> Campaigns
           </button>
           <button class="sidebar-nav-item" data-nav="wizard" onclick="switchView('wizard')">
-            <span class="sidebar-nav-icon">+</span> New Campaign
+            <span class="sidebar-nav-icon">\u270D</span> Create
           </button>
           <button class="sidebar-nav-item" data-nav="monitor" onclick="switchView('monitor', '${currentCampaign || ''}')">
-            <span class="sidebar-nav-icon">\u25CB</span> Monitor
+            <span class="sidebar-nav-icon">\u2699</span> Pipeline
+          </button>
+          <button class="sidebar-nav-item" data-nav="storage" onclick="switchView('storage')">
+            <span class="sidebar-nav-icon">\uD83D\uDD0D</span> Research
+          </button>
+          <button class="sidebar-nav-item" data-nav="review" onclick="switchView('review')">
+            <span class="sidebar-nav-icon">\u2714</span> Review
+          </button>
+          <button class="sidebar-nav-item" data-nav="staging" onclick="switchView('staging')">
+            <span class="sidebar-nav-icon">\u2713</span> Approve
           </button>
           <button class="sidebar-nav-item" data-nav="calendar" onclick="switchView('calendar', '${currentCampaign || ''}')">
-            <span class="sidebar-nav-icon">\u2637</span> Calendar
+            <span class="sidebar-nav-icon">\uD83D\uDCC5</span> Schedule
+          </button>
+          <button class="sidebar-nav-item" data-nav="social" onclick="switchView('social')">
+            <span class="sidebar-nav-icon">\uD83D\uDE80</span> Distribute
           </button>
           <button class="sidebar-nav-item" data-nav="history" onclick="switchView('history', '${currentCampaign || ''}')">
             <span class="sidebar-nav-icon">\u2261</span> History
           </button>
         </div>
         <div class="sidebar-section" id="sidebar-campaigns-section">
-          <div class="sidebar-section-header">Campaigns</div>
+          <div class="sidebar-section-header" style="display:flex;justify-content:space-between;align-items:center;">
+            Campaigns
+            <button class="sidebar-create-btn" data-nav="wizard" onclick="switchView('wizard')" style="width:auto;padding:2px 8px;font-size:11px;margin:0;" title="New Campaign">+ New</button>
+          </div>
           <div id="sidebar-campaigns-list">
             <div class="sidebar-empty">No campaigns loaded</div>
           </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">Experimental</div>
+          <button class="sidebar-nav-item" data-nav="brainstorm" onclick="switchView('brainstorm')">
+            <span class="sidebar-nav-icon">\u2728</span> Brainstorm
+          </button>
         </div>
       `;
     }
@@ -1086,25 +1696,61 @@
     }
 
     // ===================== TAB BAR =====================
+    // Maps sidebar views to pipeline flow stages
+    const FLOW_STEPS = [
+      { id: 'hub', label: 'Campaigns', icon: '\u25CB' },
+      { id: 'wizard', label: 'Create', icon: '\u270D' },
+      { id: 'monitor', label: 'Pipeline', icon: '\u2699' },
+      { id: 'storage', label: 'Research', icon: '\uD83D\uDD0D' },
+      { id: 'review', label: 'Review', icon: '\u2714' },
+      { id: 'staging', label: 'Approve', icon: '\u2713' },
+      { id: 'calendar', label: 'Schedule', icon: '\uD83D\uDCC5' },
+      { id: 'social', label: 'Distribute', icon: '\uD83D\uDE80' },
+      { id: 'history', label: 'History', icon: '\u2261' }
+    ];
+
     function renderTabBar(activeTab) {
       const tabBar = document.getElementById('workspace-tab-bar');
-      tabBar.innerHTML = ['hub', 'monitor', 'calendar', 'history'].map(tab => `
-        <button class="workspace-tab ${tab === activeTab ? 'active' : ''}" onclick="switchView('${tab}', '${currentCampaign || ''}')">
-          ${tab.charAt(0).toUpperCase() + tab.slice(1)}
-        </button>
-      `).join('');
+      const activeIdx = FLOW_STEPS.findIndex(s => s.id === activeTab);
+      const isOffPipeline = activeIdx === -1; // brainstorm etc.
+      tabBar.innerHTML = (isOffPipeline ? '<div class="pipeline-flow-step active" style="cursor:default"><span class="pipeline-flow-dot active"></span><span>' + (activeTab.charAt(0).toUpperCase() + activeTab.slice(1)) + '</span></div><span class="pipeline-flow-arrow">\u25B8</span>' : '') +
+      FLOW_STEPS.map((step, i) => {
+        const isDone = !isOffPipeline && i < activeIdx;
+        const isActive = !isOffPipeline && step.id === activeTab;
+        const dotClass = isDone ? 'done' : isActive ? 'active' : 'pending';
+        const stepClass = isDone ? 'done' : isActive ? 'active' : '';
+        const arrow = i < FLOW_STEPS.length - 1 ? '<span class="pipeline-flow-arrow">\u25B8</span>' : '';
+        return '<div class="pipeline-flow-step ' + stepClass + '" onclick="switchView(\'' + step.id + '\', \'' + (currentCampaign || '') + '\')" style="cursor:pointer" title="' + step.label + '">' +
+          '<span class="pipeline-flow-dot ' + dotClass + '"></span>' +
+          '<span>' + step.label + '</span>' +
+        '</div>' + arrow;
+      }).join('');
     }
 
     // ===================== VIEW ROUTER =====================
-    function initViewRouter() {
+    async function initViewRouter() {
       const params = getUrlParams();
+      const urlApiKey = params.api_key;
+      const urlTeamId = params.team_id;
+
+      // Cloud mode: auto-detect from URL params
+      if (params.cloud === '1' || urlApiKey) {
+        const apiKey = urlApiKey || '';
+        const teamId = urlTeamId || '788e7e68-d210-4caf-874c-84ea7ab22560';
+        const supabaseUrl = params.supabase_url || 'http://localhost:8000';
+        const supabaseKey = params.supabase_key || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+        if (apiKey) {
+          const ok = await cloudAPI.init(apiKey, teamId, supabaseUrl, supabaseKey);
+          if (ok) {
+            window.isCloudMode = true;
+            updateCloudStatus(true);
+          } else {
+            updateCloudStatus(false);
+          }
+        }
+      }
 
       renderSidebar();
-
-      if (params.cloud === '1') {
-        renderCloudView(params);
-        return;
-      }
 
       if (params.sustain === '1') {
         if (params.campaign_dir) {
@@ -1132,6 +1778,21 @@
             currentCampaign = params.campaign_dir;
             renderHistoryView();
             break;
+          case 'storage':
+            renderStorageView();
+            break;
+          case 'brainstorm':
+            renderBrainstormView();
+            break;
+          case 'review':
+            renderReviewView();
+            break;
+          case 'staging':
+            renderStagingView();
+            break;
+          case 'social':
+            renderSocialView();
+            break;
           default: renderOneShotView();
         }
       } else {
@@ -1140,6 +1801,9 @@
     }
 
     function switchView(viewName, campaignDir = null) {
+      // Clear all polling intervals on view change
+      if (window._hubInterval) { clearInterval(window._hubInterval); window._hubInterval = null; }
+      if (monitorPollTimer) { clearInterval(monitorPollTimer); monitorPollTimer = null; }
       if (viewName === 'one-shot') {
         setUrlParam('view', null);
         setUrlParam('sustain', null);
@@ -1164,6 +1828,11 @@
           case 'monitor': renderMonitorView(); break;
           case 'calendar': renderCalendarView(); break;
           case 'history': renderHistoryView(); break;
+          case 'storage': renderStorageView(); break;
+          case 'brainstorm': renderBrainstormView(); break;
+          case 'review': renderReviewView(); break;
+          case 'staging': renderStagingView(); break;
+          case 'social': renderSocialView(); break;
         }
       }
     }
@@ -1175,11 +1844,6 @@
     }
 
     // ===================== RENDER HELPERS =====================
-    function getCampaignSlug(path) {
-      if (!path) return '';
-      const parts = path.split('/');
-      return parts[parts.length - 1];
-    }
 
     // ===================== HUB VIEW =====================
     async function renderHubView() {
@@ -1202,24 +1866,32 @@
       document.getElementById('status-refresh').textContent = 'Auto-refresh: 15s';
       document.getElementById('status-dot').style.display = '';
       await loadCampaignsIndex();
-      setInterval(loadCampaignsIndex, 15000);
+      if (window._hubInterval) clearInterval(window._hubInterval);
+      window._hubInterval = setInterval(loadCampaignsIndex, 15000);
     }
 
     async function loadCampaignsIndex() {
       try {
-        const response = await fetch('campaigns-index.json?t=' + Date.now());
-        if (!response.ok) throw new Error('Index file not found');
-        const data = await response.json();
-        const campaigns = data.campaigns || [];
+        let campaigns = [];
+        if (window.isCloudMode) {
+          const cloudCampaigns = await cloudAPI.listCampaigns();
+          campaigns = cloudCampaigns.map(c => ({
+            slug: c.slug, brief: c.name, status: c.status === 'done' ? 'completed' : c.status,
+            mode: c.mode, dir: c.id, current_batch: 0, total_batches: 1,
+            cadence: c.mode, content_types: [], next_run: '', last_run_status: c.status,
+            cloudId: c.id
+          }));
+        } else {
+          const response = await fetch('campaigns-index.json?t=' + Date.now());
+          if (!response.ok) throw new Error('Index file not found');
+          const data = await response.json();
+          campaigns = data.campaigns || [];
+        }
         updateSidebarCampaigns(campaigns);
         renderCampaignCards(campaigns);
       } catch (err) {
-        document.getElementById('hub-cards').innerHTML = `
-          <div class="hub-card-empty">
-            <p>No campaigns found.</p>
-            <p>Run /marketing sustain list to refresh, or create a new campaign.</p>
-          </div>
-        `;
+        const el = document.getElementById('hub-cards');
+        if (el) el.innerHTML = '<div class="hub-card-empty"><p>No campaigns found.</p></div>';
       }
     }
 
@@ -1257,10 +1929,10 @@
               <span class="hub-card-last-result ${c.last_run_status}">${c.last_run_status || 'Pending'}</span>
             </div>
             <div class="hub-card-actions">
-              <button class="hub-action-btn" onclick="switchView('monitor', '${c.dir}')">View</button>
-              <button class="hub-action-btn run" onclick="showToast('Run Batch', '/marketing sustain run ${c.slug}')">Run Now</button>
-              <button class="hub-action-btn" onclick="showToast('Pause Campaign', '/marketing sustain pause ${c.slug}')">Pause</button>
-              <button class="hub-action-btn danger" onclick="showToast('Delete Campaign', '/marketing sustain delete ${c.slug}')">Delete</button>
+              <button class="hub-action-btn" onclick="switchView('monitor', '${c.dir}')">Open</button>
+              <button class="hub-action-btn run" onclick="copyToClipboard('/marketing sustain run ${c.slug}', this)">&#9654; Run</button>
+              <button class="hub-action-btn" onclick="copyToClipboard('/marketing sustain pause ${c.slug}', this)">&#9208; Pause</button>
+              <button class="hub-action-btn danger" onclick="copyToClipboard('/marketing sustain delete ${c.slug}', this)">&#10005; Delete</button>
             </div>
           </div>
         `;
@@ -1268,24 +1940,116 @@
     }
 
     // ===================== WIZARD VIEW =====================
+    let wizardCampaignMode = null; // 'short' or 'long'
+
     function renderWizardView() {
       const dashboard = document.getElementById('dashboard');
       currentView = 'wizard';
+      wizardCampaignMode = null;
       wizardState = { step: 1, brief: '', contentTypes: ['blog-post', 'social-media'], platforms: ['twitter'], cadence: 'weekly', day: 1, hour: 9, totalBatches: 12 };
 
-      dashboard.innerHTML = renderWizardContent();
+      dashboard.innerHTML = renderWizardTypePicker();
       setActiveTab('wizard');
       document.getElementById('status-refresh').textContent = '';
       document.getElementById('status-dot').style.display = 'none';
-      updateWizardStep();
+    }
+
+    function renderWizardTypePicker() {
+      return `
+        <div class="wizard-type-picker">
+          <div class="wizard-type-title">Create New Campaign</div>
+          <div class="wizard-type-subtitle">Choose how you want to run your campaign</div>
+          <div class="wizard-type-cards">
+            <div class="wizard-type-card" onclick="selectCampaignMode('short')">
+              <div class="wizard-type-card-icon">\u26A1</div>
+              <div class="wizard-type-card-name">Short Campaign</div>
+              <div class="wizard-type-card-desc">One-time pipeline run that generates all content in a single session.</div>
+              <div class="wizard-type-card-features">
+                <span>\u2713</span> Runs once, completes in ~30-60 min<br>
+                <span>\u2713</span> Full research + strategy + content<br>
+                <span>\u2713</span> Ideal for product launches, events<br>
+                <span>\u2713</span> All deliverables in one batch
+              </div>
+            </div>
+            <div class="wizard-type-card" onclick="selectCampaignMode('long')">
+              <div class="wizard-type-card-icon">\uD83D\uDD04</div>
+              <div class="wizard-type-card-name">Long Campaign</div>
+              <div class="wizard-type-card-desc">Recurring scheduled campaign that produces content on autopilot over weeks or months.</div>
+              <div class="wizard-type-card-features">
+                <span>\u2713</span> Automated scheduling (daily/weekly/monthly)<br>
+                <span>\u2713</span> Content calendar with themes<br>
+                <span>\u2713</span> Strategy auto-refresh every N batches<br>
+                <span>\u2713</span> Ideal for ongoing content marketing
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectCampaignMode(mode) {
+      wizardCampaignMode = mode;
+      const dashboard = document.getElementById('dashboard');
+      if (mode === 'short') {
+        dashboard.innerHTML = renderShortCampaignForm();
+      } else {
+        dashboard.innerHTML = renderWizardContent();
+        updateWizardStep();
+      }
+    }
+
+    function renderShortCampaignForm() {
+      return `
+        <div class="wizard-view">
+          <div class="wizard-header">
+            <span class="wizard-title">\u26A1 Short Campaign</span>
+            <p class="wizard-subtitle">One-time full pipeline run</p>
+          </div>
+          <div class="wizard-content">
+            <div class="wizard-step-title">Campaign Brief</div>
+            <div class="wizard-label">What is this campaign about?</div>
+            <textarea class="wizard-textarea" id="short-brief" placeholder="e.g., Launch campaign for our new AI analytics product targeting enterprise CTOs"></textarea>
+            <p class="wizard-hint">Describe your campaign goal, target audience, and key messages.</p>
+
+            <div class="wizard-label" style="margin-top:16px">Pipeline Mode</div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <button class="brainstorm-type-option selected" id="mode-full" onclick="setShortMode('full-funnel')">Full Funnel (8 stages)</button>
+              <button class="brainstorm-type-option" id="mode-content" onclick="setShortMode('content')">Content Only</button>
+              <button class="brainstorm-type-option" id="mode-research" onclick="setShortMode('research')">Research Only</button>
+            </div>
+
+            <div class="wizard-nav" style="margin-top:24px">
+              <button class="wizard-btn wizard-btn-back" onclick="renderWizardView()">Back</button>
+              <button class="wizard-btn wizard-btn-next" onclick="launchShortCampaign()">Generate & Copy Command</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    let shortCampaignMode = 'full-funnel';
+    function setShortMode(mode) {
+      shortCampaignMode = mode;
+      document.querySelectorAll('#mode-full,#mode-content,#mode-research').forEach(b => b.classList.remove('selected'));
+      if (mode === 'full-funnel') document.getElementById('mode-full').classList.add('selected');
+      else if (mode === 'content') document.getElementById('mode-content').classList.add('selected');
+      else document.getElementById('mode-research').classList.add('selected');
+    }
+
+    function launchShortCampaign() {
+      const brief = (document.getElementById('short-brief') || {}).value || '';
+      if (!brief.trim()) { alert('Please enter a campaign brief.'); return; }
+      const cmdMap = { 'full-funnel': 'campaign', 'content': 'content', 'research': 'research' };
+      const command = `/marketing ${cmdMap[shortCampaignMode] || 'campaign'} ${brief.trim()}`;
+      copyToClipboard(command, document.querySelector('.wizard-btn-next'));
     }
 
     function renderWizardContent() {
       return `
         <div class="wizard-view">
           <div class="wizard-header">
-            <span class="wizard-title">Create Campaign</span>
-            <p class="wizard-subtitle">Step-by-step guided setup for your sustained campaign</p>
+            <span class="wizard-title">\uD83D\uDD04 Long Campaign</span>
+            <p class="wizard-subtitle">Step-by-step setup for a recurring sustained campaign</p>
           </div>
           <div class="wizard-steps">
             <div class="wizard-step" id="step-1-indicator"></div>
@@ -1445,71 +2209,270 @@
     }
 
     // ===================== CALENDAR VIEW =====================
+    let calViewYear, calViewMonth;
+    let calEntries = [];
+    let calScheduledItems = [];
+    let calCampaignsList = [];
+    let calPopoverTypes = new Set(['blog-post', 'social-media']);
+
     async function renderCalendarView() {
       const dashboard = document.getElementById('dashboard');
       currentView = 'calendar';
-      dashboard.innerHTML = `
-        <div class="calendar-view">
-          <div class="calendar-funnel-bar" id="calendar-funnel"></div>
-          <div class="calendar-grid" id="calendar-grid">Loading calendar...</div>
+      const now = new Date();
+      calViewYear = now.getFullYear();
+      calViewMonth = now.getMonth();
+      dashboard.innerHTML = `<div class="calendar-view">
+        <div class="calendar-funnel-bar" id="calendar-funnel"></div>
+        <div class="cal-month-header">
+          <div class="cal-month-nav">
+            <button class="cal-month-btn" onclick="navigateMonth(-1)">\u25C0 Prev</button>
+            <button class="cal-month-btn" onclick="goToToday()">Today</button>
+            <button class="cal-month-btn" onclick="navigateMonth(1)">Next \u25B6</button>
+          </div>
+          <div class="cal-month-title" id="cal-month-title"></div>
         </div>
-      `;
+        <div class="cal-layout">
+          <div class="cal-main">
+            <div class="cal-weekdays">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<div class="cal-weekday">${d}</div>`).join('')}</div>
+            <div class="cal-grid" id="cal-grid">Loading...</div>
+          </div>
+          <div class="cal-queue" id="cal-queue">
+            <div class="cal-queue-title">Approved Content</div>
+            <button class="cal-auto-btn" onclick="autoScheduleAll()">Auto-Schedule All</button>
+            <div id="cal-queue-items"></div>
+          </div>
+        </div>
+      </div>`;
       setActiveTab('calendar');
-      document.getElementById('status-refresh').textContent = '';
-      document.getElementById('status-dot').style.display = 'none';
-      await loadCalendar();
+      await loadCalendarData();
+      renderCalendarQueue();
     }
 
-    async function loadCalendar() {
+    async function loadCalendarData() {
+      calEntries = [];
+      calScheduledItems = [];
+      // Load content-calendar.json (campaign batches)
       try {
-        const response = await fetch((currentCampaign || '.') + '/content-calendar.json?t=' + Date.now());
-        if (!response.ok) throw new Error('Calendar not found');
-        const calendar = await response.json();
-        calendarData = calendar;
-        renderFunnelBar(calendar);
-        renderCalendarGrid(calendar);
-      } catch (err) {
-        document.getElementById('calendar-grid').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-faint)">Calendar not found. Run /marketing sustain calendar ${getCampaignSlug(currentCampaign)} to generate.</div>`;
-      }
-    }
-
-    function renderFunnelBar(calendar) {
+        const r = await fetch((currentCampaign || '.') + '/content-calendar.json?t=' + Date.now());
+        if (r.ok) {
+          const data = await r.json();
+          const entries = data.entries || data;
+          if (Array.isArray(entries)) calEntries = entries;
+        }
+      } catch (e) {}
+      // Load schedule.json (user-scheduled items)
+      try {
+        const r2 = await fetch('schedule.json?t=' + Date.now());
+        if (r2.ok) {
+          const sData = await r2.json();
+          calScheduledItems = sData.items || [];
+        }
+      } catch (e) {}
+      // Load campaigns list for popover
+      try {
+        const r3 = await fetch('campaigns-index.json?t=' + Date.now());
+        if (r3.ok) {
+          const cData = await r3.json();
+          calCampaignsList = cData.campaigns || [];
+        }
+      } catch (e) {}
+      // Render funnel bar from entries
       const counts = { awareness: 0, consideration: 0, decision: 0, retention: 0 };
-      calendar.forEach(e => { if (e.funnel_stage && counts[e.funnel_stage] !== undefined) counts[e.funnel_stage]++; });
+      calEntries.forEach(e => { if (e.funnel_stage && counts[e.funnel_stage] !== undefined) counts[e.funnel_stage]++; });
       document.getElementById('calendar-funnel').innerHTML = `
         <div class="calendar-funnel-segment awareness">Awareness (${counts.awareness})</div>
         <div class="calendar-funnel-segment consideration">Consideration (${counts.consideration})</div>
         <div class="calendar-funnel-segment decision">Decision (${counts.decision})</div>
-        <div class="calendar-funnel-segment retention">Retention (${counts.retention})</div>
-      `;
+        <div class="calendar-funnel-segment retention">Retention (${counts.retention})</div>`;
+      renderMonthCalendar();
     }
 
-    function renderCalendarGrid(calendar) {
-      document.getElementById('calendar-grid').innerHTML = calendar.map((entry, i) => {
-        const status = entry.status || 'pending';
-        return `
-          <div class="calendar-card ${status}" onclick="openBatchDetail(${i})">
-            <div class="calendar-card-tags">
-              <span class="calendar-tag funnel-${entry.funnel_stage}">${entry.funnel_stage || 'Unknown'}</span>
-              <span class="calendar-tag pillar">${entry.content_pillar || 'General'}</span>
-            </div>
-            <div class="calendar-card-header">
-              <span class="calendar-card-batch">Batch ${(entry.batch_number || i + 1).toString().padStart(3, '0')}</span>
-              <span class="calendar-card-status ${status}"></span>
-            </div>
-            <div class="calendar-card-theme">${escapeHtml(entry.theme || 'No theme')}</div>
-            <div class="calendar-card-date">${entry.scheduled_date || 'Not scheduled'}</div>
-            <div class="calendar-card-expand">Click to view details</div>
-          </div>
-        `;
+    function navigateMonth(delta) { calViewMonth += delta; if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; } else if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; } renderMonthCalendar(); }
+    function goToToday() { const n = new Date(); calViewYear = n.getFullYear(); calViewMonth = n.getMonth(); renderMonthCalendar(); }
+
+    function renderMonthCalendar() {
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('cal-month-title').textContent = months[calViewMonth] + ' ' + calViewYear;
+      const firstDay = new Date(calViewYear, calViewMonth, 1);
+      const lastDay = new Date(calViewYear, calViewMonth + 1, 0);
+      let startDow = firstDay.getDay(); // 0=Sun
+      startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
+      const todayStr = new Date().toISOString().split('T')[0];
+      const cells = [];
+      // Previous month fill
+      const prevLast = new Date(calViewYear, calViewMonth, 0).getDate();
+      for (let i = startDow - 1; i >= 0; i--) {
+        const d = prevLast - i;
+        const dt = new Date(calViewYear, calViewMonth - 1, d);
+        cells.push({ date: d, dateStr: fmtDate(dt), otherMonth: true });
+      }
+      // Current month
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dt = new Date(calViewYear, calViewMonth, d);
+        cells.push({ date: d, dateStr: fmtDate(dt), otherMonth: false });
+      }
+      // Next month fill
+      const remaining = 42 - cells.length;
+      for (let d = 1; d <= remaining; d++) {
+        const dt = new Date(calViewYear, calViewMonth + 1, d);
+        cells.push({ date: d, dateStr: fmtDate(dt), otherMonth: true });
+      }
+
+      document.getElementById('cal-grid').innerHTML = cells.map(cell => {
+        const items = getItemsForDate(cell.dateStr);
+        const isToday = cell.dateStr === todayStr;
+        const classes = ['cal-cell'];
+        if (cell.otherMonth) classes.push('other-month');
+        if (isToday) classes.push('today');
+        if (items.length > 0) classes.push('has-items');
+        const pills = items.map(it => {
+          const pillClass = it.type === 'scheduled' ? 'scheduled' : (it.funnel_stage || '');
+          const doneClass = it.status === 'completed' ? ' completed-pill' : '';
+          return `<div class="cal-pill ${pillClass}${doneClass}" onclick="event.stopPropagation(); ${it.type === 'batch' ? `openBatchDetail(${it.index})` : ''}" title="${escapeHtml(it.label)}">${escapeHtml(it.label)}</div>`;
+        }).join('');
+        return `<div class="${classes.join(' ')}" onclick="openSchedulePopover('${cell.dateStr}')">
+          <div class="cal-cell-date">${cell.date}</div>
+          ${pills}
+          ${items.length === 0 ? '<div class="cal-add-hint">+</div>' : ''}
+        </div>`;
       }).join('');
     }
 
-    // ===================== BATCH DETAIL PANEL =====================
-    let calendarData = [];
+    function fmtDate(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
 
+    function getItemsForDate(dateStr) {
+      const items = [];
+      calEntries.forEach((e, i) => {
+        if (e.scheduled_date === dateStr) {
+          items.push({ type: 'batch', label: (e.theme || 'Batch ' + (e.batch || i + 1)).substring(0, 30), funnel_stage: e.funnel_stage, status: e.status, index: i });
+        }
+      });
+      calScheduledItems.forEach(s => {
+        if (s.date === dateStr) {
+          items.push({ type: 'scheduled', label: (s.campaign || 'Campaign') + ' @ ' + (s.time || '09:00'), status: s.status });
+        }
+      });
+      return items;
+    }
+
+    function openSchedulePopover(dateStr) {
+      closeSchedulePopover();
+      const overlay = document.createElement('div');
+      overlay.className = 'cal-popover-overlay';
+      overlay.id = 'cal-popover-overlay';
+      overlay.onclick = closeSchedulePopover;
+      const campaignOptions = calCampaignsList.map(c => `<option value="${c.slug}">${escapeHtml(c.brief || c.slug)}</option>`).join('');
+      const allTypes = ['blog-post', 'social-media', 'email', 'landing-page', 'images', 'videos'];
+      const popover = document.createElement('div');
+      popover.className = 'cal-popover';
+      popover.id = 'cal-popover';
+      popover.innerHTML = `
+        <div class="cal-popover-title">
+          <span>Schedule for ${dateStr}</span>
+          <button class="cal-popover-close" onclick="closeSchedulePopover()">&times;</button>
+        </div>
+        <div class="cal-popover-field">
+          <div class="cal-popover-label">Campaign</div>
+          <select class="cal-popover-select" id="sched-campaign">
+            <option value="">Select campaign...</option>
+            ${campaignOptions}
+          </select>
+        </div>
+        <div class="cal-popover-field">
+          <div class="cal-popover-label">Content Types</div>
+          <div class="cal-popover-checks" id="sched-types">
+            ${allTypes.map(t => `<button class="cal-popover-check ${calPopoverTypes.has(t) ? 'active' : ''}" onclick="toggleCalType('${t}', this)">${t}</button>`).join('')}
+          </div>
+        </div>
+        <div class="cal-popover-field">
+          <div class="cal-popover-label">Time</div>
+          <input type="time" class="cal-popover-time" id="sched-time" value="09:00">
+        </div>
+        <button class="cal-popover-submit" onclick="submitSchedule('${dateStr}')">Schedule &amp; Copy Command</button>
+      `;
+      document.body.appendChild(overlay);
+      document.body.appendChild(popover);
+    }
+
+    function closeSchedulePopover() {
+      const o = document.getElementById('cal-popover-overlay');
+      const p = document.getElementById('cal-popover');
+      if (o) o.remove();
+      if (p) p.remove();
+    }
+
+    function toggleCalType(type, el) {
+      if (calPopoverTypes.has(type)) calPopoverTypes.delete(type); else calPopoverTypes.add(type);
+      if (el) el.classList.toggle('active');
+    }
+
+    function submitSchedule(dateStr) {
+      const campaign = document.getElementById('sched-campaign').value;
+      const time = document.getElementById('sched-time').value || '09:00';
+      const types = Array.from(calPopoverTypes);
+      if (!campaign) { alert('Please select a campaign.'); return; }
+      if (types.length === 0) { alert('Please select at least one content type.'); return; }
+      // Add to local schedule
+      calScheduledItems.push({ date: dateStr, time, campaign, types, status: 'scheduled' });
+      const command = `/marketing sustain run ${campaign} --date ${dateStr} --time ${time} --types ${types.join(',')}`;
+      copyToClipboard(command);
+      closeSchedulePopover();
+      renderMonthCalendar();
+    }
+
+    // Queue rendering
+    let calQueueSelectedPiece = null;
+
+    function renderCalendarQueue() {
+      const container = document.getElementById('cal-queue-items');
+      if (!container) return;
+      const approved = stagingItems.filter(s => s.reviewStatus === 'approved');
+      if (approved.length === 0) {
+        container.innerHTML = '<div class="cal-queue-empty">No approved content. Approve pieces in Staging Area first.</div>';
+        return;
+      }
+      container.innerHTML = approved.map((item, i) => {
+        const idx = stagingItems.indexOf(item);
+        const isActive = calQueueSelectedPiece === idx;
+        return '<div class="cal-queue-item ' + (isActive ? 'active' : '') + '" onclick="selectQueuePiece(' + idx + ')">' +
+          '<div class="cal-queue-item-name">' + escapeHtml(item.name) + '</div>' +
+          '<div class="cal-queue-item-meta"><span class="storage-card-badge ' + item.category + '" style="font-size:9px">' + item.category + '</span> ' + escapeHtml(item.campaign) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function selectQueuePiece(idx) {
+      calQueueSelectedPiece = calQueueSelectedPiece === idx ? null : idx;
+      renderCalendarQueue();
+    }
+
+    function autoScheduleAll() {
+      const approved = stagingItems.filter(s => s.reviewStatus === 'approved');
+      if (approved.length === 0) { alert('No approved content to schedule.'); return; }
+      const today = new Date();
+      approved.forEach((item, i) => {
+        const schedDate = new Date(today);
+        schedDate.setDate(schedDate.getDate() + i + 1); // spread 1 per day starting tomorrow
+        const hour = 9 + (i % 3) * 4; // vary times: 9am, 1pm, 5pm
+        calScheduledItems.push({
+          date: fmtDate(schedDate),
+          time: String(hour).padStart(2, '0') + ':00',
+          campaign: item.campaign,
+          types: [item.category],
+          name: item.name,
+          status: 'scheduled'
+        });
+      });
+      renderMonthCalendar();
+      renderCalendarQueue();
+      copyToClipboard('Auto-scheduled ' + approved.length + ' pieces across upcoming dates');
+    }
+
+    // ===================== BATCH DETAIL PANEL =====================
     function openBatchDetail(index) {
-      const entry = (calendarData || [])[index];
+      const entry = (calEntries || [])[index];
       if (!entry) return;
       document.getElementById('detail-title').textContent = `Batch ${(entry.batch_number || index + 1).toString().padStart(3, '0')}: ${entry.theme || 'No theme'}`;
       document.getElementById('detail-content').innerHTML = `
@@ -1556,21 +2519,89 @@
     }
 
     // ===================== HISTORY VIEW =====================
+    let historyFilter = 'all';
+    let historyCampaigns = [];
+
     async function renderHistoryView() {
       const dashboard = document.getElementById('dashboard');
       currentView = 'history';
+      // Load campaigns for filter
+      try {
+        if (window.isCloudMode) {
+          const cloudCampaigns = await cloudAPI.listCampaigns();
+          historyCampaigns = cloudCampaigns.map(c => ({
+            name: c.name, slug: c.slug, mode: c.mode,
+            status: c.status === 'done' ? 'complete' : c.status,
+            date: (c.created_at || '').split('T')[0],
+            deliverableCount: 0
+          }));
+        } else {
+          const r = await fetch('storage-index.json?t=' + Date.now());
+          if (r.ok) { const d = await r.json(); historyCampaigns = d.campaigns || []; }
+        }
+      } catch (e) {}
+
+      const counts = { all: historyCampaigns.length, pending: 0, active: 0, complete: 0 };
+      historyCampaigns.forEach(c => { const s = (c.status || '').toLowerCase(); if (s === 'complete' || s === 'completed') counts.complete++; else if (s === 'active' || s === 'running') counts.active++; else counts.pending++; });
+
       dashboard.innerHTML = `
-        <div class="history-view">
+        <div class="history-view" style="padding:20px">
+          <div style="font-size:20px;font-weight:700;color:var(--text-normal);margin-bottom:16px">History</div>
+          <div class="history-filters">
+            <button class="history-filter-tab ${historyFilter === 'all' ? 'active' : ''}" onclick="filterHistory('all')">All (${counts.all})</button>
+            <button class="history-filter-tab ${historyFilter === 'pending' ? 'active' : ''}" onclick="filterHistory('pending')">Pending (${counts.pending})</button>
+            <button class="history-filter-tab ${historyFilter === 'active' ? 'active' : ''}" onclick="filterHistory('active')">Active (${counts.active})</button>
+            <button class="history-filter-tab ${historyFilter === 'complete' ? 'active' : ''}" onclick="filterHistory('complete')">Completed (${counts.complete})</button>
+          </div>
+          <div class="history-campaigns" id="history-campaigns"></div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-normal);margin:20px 0 12px">Batch Execution Log</div>
           <table class="history-table">
             <thead><tr><th>Batch</th><th>Date</th><th>Duration</th><th>Status</th></tr></thead>
-            <tbody id="history-rows"><tr><td colspan="4" style="text-align:center;color:var(--text-faint)">Loading history...</td></tr></tbody>
+            <tbody id="history-rows"><tr><td colspan="4" style="text-align:center;color:var(--text-faint)">Loading...</td></tr></tbody>
           </table>
         </div>
       `;
       setActiveTab('history');
       document.getElementById('status-refresh').textContent = '';
       document.getElementById('status-dot').style.display = 'none';
+      renderHistoryCampaigns();
       await loadHistory();
+    }
+
+    function filterHistory(filter) {
+      historyFilter = filter;
+      document.querySelectorAll('.history-filter-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.history-filter-tab[onclick*="' + filter + '"]').classList.add('active');
+      renderHistoryCampaigns();
+    }
+
+    function renderHistoryCampaigns() {
+      const container = document.getElementById('history-campaigns');
+      let filtered = historyCampaigns;
+      if (historyFilter !== 'all') {
+        filtered = historyCampaigns.filter(c => {
+          const s = (c.status || '').toLowerCase();
+          if (historyFilter === 'complete') return s === 'complete' || s === 'completed';
+          if (historyFilter === 'active') return s === 'active' || s === 'running';
+          return s !== 'complete' && s !== 'completed' && s !== 'active' && s !== 'running';
+        });
+      }
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint)">No campaigns match this filter.</div>';
+        return;
+      }
+      container.innerHTML = filtered.map(c => {
+        const statusClass = (c.status || '').toLowerCase().replace('completed', 'complete');
+        return '<div class="history-campaign-card">' +
+          '<div class="history-campaign-name">' + escapeHtml(c.name) + '</div>' +
+          '<div class="history-campaign-meta">' +
+            '<span class="staging-review-badge ' + statusClass + '">' + (c.status || 'pending') + '</span>' +
+            '<span>' + c.mode + '</span>' +
+            '<span>' + c.date + '</span>' +
+            '<span>' + c.deliverableCount + ' deliverables</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
     }
 
     async function loadHistory() {
@@ -1578,7 +2609,7 @@
         const response = await fetch((currentCampaign || '.') + '/batch-history.json?t=' + Date.now());
         if (!response.ok) throw new Error('History not found');
         const history = await response.json();
-        calendarData = history;
+        calEntries = history;
         renderHistoryRows(history);
       } catch (err) {
         document.getElementById('history-rows').innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-faint)">No history found. Run batches to see execution history.</td></tr>`;
@@ -1599,37 +2630,176 @@
     function formatDuration(seconds) { if (!seconds) return '-'; const mins = Math.floor(seconds / 60); const secs = seconds % 60; return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`; }
 
     // ===================== MONITOR VIEW =====================
+    const PIPELINE_STAGES = [
+      { id: 'setup', name: 'Setup', icon: '\u2699' },
+      { id: 'research', name: 'Research', icon: '\uD83D\uDD0D' },
+      { id: 'strategy', name: 'Strategy', icon: '\uD83C\uDFAF' },
+      { id: 'content', name: 'Content + SEO + Media', icon: '\u270D' },
+      { id: 'review', name: 'Review', icon: '\u2714' },
+      { id: 'final', name: 'Final Report', icon: '\uD83D\uDCCB' },
+      { id: 'approval', name: 'Content Approval', icon: '\u23F3' },
+      { id: 'distribution', name: 'Distribution', icon: '\uD83D\uDE80' }
+    ];
+
+    let monitorPollTimer = null;
+
     async function renderMonitorView() {
       const dashboard = document.getElementById('dashboard');
       currentView = 'monitor';
-      dashboard.innerHTML = `
-        <div class="sustain-panel-view">
-          <div class="sustain-header"><span class="sustain-title">Campaign Monitor</span></div>
-          <div class="sustain-sections">
-            <div class="sustain-section"><div class="sustain-section-title">Campaign Status</div><div class="sustain-status" id="sustain-status">Loading...</div></div>
-            <div class="sustain-section"><div class="sustain-section-title">Progress</div><div class="sustain-progress" id="sustain-progress">Loading...</div></div>
-            <div class="sustain-section"><div class="sustain-section-title">Next Run</div><div class="sustain-next-run" id="sustain-next-run">Loading...</div></div>
-          </div>
-        </div>
-      `;
+      dashboard.innerHTML = '<div class="monitor-view"><select class="review-campaign-select" id="monitor-campaign-select" onchange="switchMonitorCampaign(this.value)" style="margin-bottom:16px"></select><div id="monitor-container"><div class="monitor-empty"><h3>Loading pipeline data...</h3></div></div></div>';
       setActiveTab('monitor');
-      document.getElementById('status-refresh').textContent = '';
-      document.getElementById('status-dot').style.display = 'none';
+      // Load campaign list for selector
+      let monitorCampaignList = [];
+      try {
+        if (window.isCloudMode) {
+          monitorCampaignList = await cloudAPI.listCampaigns();
+          monitorCampaignList = monitorCampaignList.map(c => ({ id: c.id, name: c.name || c.slug, dir: c.id }));
+        } else {
+          const r = await fetch('storage-index.json?t=' + Date.now());
+          if (r.ok) {
+            const data = await r.json();
+            monitorCampaignList = (data.campaigns || []).map(c => ({ id: c.outputDir, name: c.name, dir: c.outputDir }));
+          }
+        }
+        } catch (e) {}
+      // Populate campaign selector
+      const select = document.getElementById('monitor-campaign-select');
+      if (select && monitorCampaignList.length > 0) {
+        if (!currentCampaign) currentCampaign = monitorCampaignList[0].dir;
+        select.innerHTML = monitorCampaignList.map(c =>
+          '<option value="' + escapeHtml(c.dir) + '"' + (currentCampaign === c.dir ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>'
+        ).join('');
+      } else if (select) {
+        select.innerHTML = '<option>No campaigns found</option>';
+      }
       await loadMonitorData();
+      // Auto-refresh every 5s
+      if (monitorPollTimer) clearInterval(monitorPollTimer);
+      monitorPollTimer = setInterval(loadMonitorData, 5000);
+      document.getElementById('status-refresh').textContent = 'Auto-refresh: 5s';
+      document.getElementById('status-dot').style.display = '';
+    }
+
+    function switchMonitorCampaign(dir) {
+      currentCampaign = dir;
+      if (monitorPollTimer) clearInterval(monitorPollTimer);
+      loadMonitorData();
+      monitorPollTimer = setInterval(loadMonitorData, 5000);
     }
 
     async function loadMonitorData() {
+      const container = document.getElementById('monitor-container');
+      if (!container || currentView !== 'monitor') { if (monitorPollTimer) clearInterval(monitorPollTimer); return; }
+
+      let pipelineData = null;
+      let campaignName = '';
+      let campaignStatus = 'pending';
+
       try {
-        const config = await fetchJson(currentCampaign + '/campaign-config.json');
-        const state = await fetchJson(currentCampaign + '/campaign-state.json');
-        const calendar = await fetchJson(currentCampaign + '/content-calendar.json');
-        document.getElementById('sustain-status').textContent = state.status || 'Unknown';
-        document.getElementById('sustain-progress').textContent = `Batch ${state.current_batch || 0} of ${config.total_batches || 0}`;
-        const nextEntry = calendar.find(e => e.status === 'pending');
-        document.getElementById('sustain-next-run').textContent = nextEntry?.scheduled_date || 'All batches complete';
-      } catch (err) {
-        document.getElementById('sustain-status').textContent = 'Error loading data';
+        if (window.isCloudMode && currentCampaign) {
+          const campaign = await cloudAPI.getCampaign(currentCampaign);
+          if (campaign) {
+            pipelineData = campaign.pipeline_status || {};
+            campaignName = campaign.name || campaign.slug || '';
+            campaignStatus = campaign.status || 'pending';
+            pipelineData.status = pipelineData.status || campaignStatus;
+            pipelineData.campaign = pipelineData.campaign || campaignName;
+          }
+        } else if (currentCampaign) {
+          // Convert absolute paths to relative URLs via the marketing-output symlink
+          let basePath = currentCampaign;
+          if (basePath.includes('/marketing-output/')) {
+            basePath = 'marketing-output/' + basePath.split('/marketing-output/')[1];
+          } else if (basePath.includes('/.marketing-pipeline/')) {
+            basePath = basePath; // keep as-is for local campaign dirs
+          }
+          try { pipelineData = await fetchJson(basePath + '/pipeline-status.json'); } catch (e) {}
+          if (!pipelineData) {
+            try {
+              const config = await fetchJson(basePath + '/campaign-config.json');
+              const state = await fetchJson(basePath + '/campaign-state.json');
+              pipelineData = {
+                campaign: config.brief || config.slug || 'Campaign',
+                status: state.status || 'pending',
+                progress: { current: state.current_batch || 0, total: config.total_batches || 1 },
+                stages: [], deliverables: [], activities: []
+              };
+            } catch (e2) {}
+          }
+        }
+      } catch (e) {}
+
+      if (!pipelineData) {
+        container.innerHTML = '<div class="monitor-empty"><h3>No campaign selected</h3><p style="color:var(--text-faint)">Select a campaign from the sidebar or Hub to monitor its progress.</p></div>';
+        return;
       }
+
+      const status = (pipelineData.status || 'pending').toLowerCase();
+      const stages = pipelineData.stages || [];
+      const progress = pipelineData.progress || { current: 0, total: PIPELINE_STAGES.length };
+      const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+      const deliverables = pipelineData.deliverables || [];
+      const activities = pipelineData.activities || [];
+      const doneDeliverables = deliverables.filter(d => d.status === 'done').length;
+      const totalAgents = stages.reduce((sum, s) => sum + (s.agents || []).length, 0);
+      const activeAgents = stages.reduce((sum, s) => sum + (s.agents || []).filter(a => a.status === 'running').length, 0);
+
+      container.innerHTML = '<div class="monitor-view">' +
+        '<div class="monitor-header">' +
+          '<div class="monitor-title">' + escapeHtml(pipelineData.campaign || 'Campaign Monitor') + '</div>' +
+          '<span class="monitor-status-badge ' + status + '">' + status.replace('_', ' ') + '</span>' +
+        '</div>' +
+        '<div class="monitor-stats">' +
+          '<div class="monitor-stat"><div class="monitor-stat-value">' + pct + '%</div><div class="monitor-stat-label">Progress</div></div>' +
+          '<div class="monitor-stat"><div class="monitor-stat-value">' + progress.current + '/' + progress.total + '</div><div class="monitor-stat-label">Stages</div></div>' +
+          '<div class="monitor-stat"><div class="monitor-stat-value">' + (activeAgents > 0 ? '<span style="animation:pulse-accent 1.5s infinite">' + activeAgents + '</span>' : '0') + '/' + totalAgents + '</div><div class="monitor-stat-label">Agents</div></div>' +
+          '<div class="monitor-stat"><div class="monitor-stat-value">' + doneDeliverables + '/' + deliverables.length + '</div><div class="monitor-stat-label">Deliverables</div></div>' +
+        '</div>' +
+        '<div class="monitor-progress-section">' +
+          '<div class="monitor-progress-bar"><div class="monitor-progress-fill ' + (pct >= 100 ? 'complete' : '') + '" style="width:' + pct + '%"></div></div>' +
+          '<div class="monitor-progress-text"><span>Stage ' + progress.current + ' of ' + progress.total + '</span><span>' + pct + '% complete</span></div>' +
+        '</div>' +
+        '<div class="monitor-stages">' +
+          renderMonitorStages(stages) +
+        '</div>' +
+        (activities.length > 0 ? '<div class="monitor-activity"><div class="monitor-activity-title">Activity Log</div><div class="monitor-log">' + activities.slice(-20).reverse().map(a => '<div class="monitor-log-entry ' + (a.level || '') + '"><span class="log-time">' + (a.time || '') + '</span>' + escapeHtml(a.message || '') + '</div>').join('') + '</div></div>' : '') +
+      '</div>';
+    }
+
+    function renderMonitorStages(stages) {
+      if (stages.length === 0) {
+        return PIPELINE_STAGES.map((s, i) => {
+          return '<div class="monitor-stage">' +
+            '<div class="monitor-stage-icon">' + s.icon + '</div>' +
+            '<div class="monitor-stage-name">' + s.name + '</div>' +
+            '<span class="monitor-stage-status pending">Pending</span>' +
+          '</div>';
+        }).join('');
+      }
+      return stages.map(s => {
+        const stageStatus = (s.status || 'pending').toLowerCase();
+        const isActive = stageStatus === 'running';
+        const isDone = stageStatus === 'done';
+        const icon = (PIPELINE_STAGES.find(ps => ps.id === s.id) || {}).icon || '\u25CF';
+        const agents = s.agents || [];
+        const agentText = agents.length > 0 ? agents.map(a => a.name + ' (' + (a.status || 'pending') + ')').join(', ') : '';
+        let timeText = '';
+        if (s.startTime && s.endTime) {
+          const dur = Math.round((new Date(s.endTime) - new Date(s.startTime)) / 1000);
+          timeText = dur > 60 ? Math.floor(dur / 60) + 'm ' + (dur % 60) + 's' : dur + 's';
+        } else if (s.startTime && isActive) {
+          timeText = 'Running...';
+        }
+        return '<div class="monitor-stage ' + (isActive ? 'active' : '') + ' ' + (isDone ? 'done' : '') + '"' + (isActive ? ' style="animation:pulse-accent 2s infinite"' : '') + '>' +
+          '<div class="monitor-stage-icon">' + (isDone ? '\u2713' : isActive ? '\u25B6' : icon) + '</div>' +
+          '<div style="flex:1">' +
+            '<div class="monitor-stage-name">' + escapeHtml(s.name || s.id || 'Stage') + '</div>' +
+            (agentText ? '<div class="monitor-stage-agents">' + escapeHtml(agentText) + '</div>' : '') +
+          '</div>' +
+          '<span class="monitor-stage-status ' + stageStatus + '">' + (isDone ? 'Done' : isActive ? 'Running' : stageStatus === 'failed' ? 'Failed' : 'Pending') + '</span>' +
+          (timeText ? '<span class="monitor-stage-time">' + timeText + '</span>' : '') +
+        '</div>';
+      }).join('');
     }
 
     // ===================== ONE SHOT VIEW =====================
@@ -1651,47 +2821,950 @@
     }
 
     // ===================== CLOUD VIEW =====================
-    function renderCloudView(params) {
+
+    // ===================== SOCIAL INTEGRATIONS VIEW =====================
+    let socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {} };
+
+    async function renderSocialView() {
       const dashboard = document.getElementById('dashboard');
-      currentView = 'cloud';
-      dashboard.innerHTML = `
-        <div style="text-align:center;padding:60px 20px;">
-          <h2 style="color:var(--text-normal);font-size:20px;margin-bottom:12px;font-weight:600;">Cloud Campaign</h2>
-          <p style="color:var(--text-muted);font-size:14px;">Campaign ID: ${params.campaign_id || 'Unknown'}</p>
+      currentView = 'social';
+      // Load saved config
+      try {
+        if (window.isCloudMode) {
+          const c = await cloudAPI.getDistConfig();
+          socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {}, ...c };
+        } else {
+          const r = await fetch('staging-config.json?t=' + Date.now());
+          if (r.ok) { const c = await r.json(); socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {}, ...c }; }
+        }
+      } catch (e) {}
+
+      const platforms = [
+        { key: 'reddit', name: 'Reddit', icon: '\uD83E\uDD16', desc: 'Post to subreddits via OAuth2',
+          fields: [
+            { id: 'client_id', label: 'Client ID', hint: 'From reddit.com/prefs/apps (script type app)' },
+            { id: 'client_secret', label: 'Client Secret', type: 'password' },
+            { id: 'username', label: 'Reddit Username' },
+            { id: 'password', label: 'Reddit Password', type: 'password' },
+            { id: 'user_agent', label: 'User Agent', hint: 'e.g. marketing-bot/1.0' },
+            { id: 'default_subreddit', label: 'Default Subreddit', hint: 'e.g. test or marketing' }
+          ]},
+        { key: 'twitter', name: 'Twitter / X', icon: '\uD835\uDD4F', desc: 'Post tweets and threads via OAuth 1.0a',
+          fields: [
+            { id: 'api_key', label: 'API Key (Consumer Key)', hint: 'From developer.twitter.com portal' },
+            { id: 'api_secret', label: 'API Secret', type: 'password' },
+            { id: 'access_token', label: 'Access Token' },
+            { id: 'access_token_secret', label: 'Access Token Secret', type: 'password' }
+          ]},
+        { key: 'discord', name: 'Discord', icon: '\uD83C\uDFAE', desc: 'Post via webhook to any channel',
+          fields: [
+            { id: 'webhook_url', label: 'Webhook URL', hint: 'Server Settings > Integrations > Webhooks > Copy URL' }
+          ]}
+      ];
+
+      dashboard.innerHTML = `<div class="social-view">
+        <div class="social-title">Social Integrations</div>
+        <div class="social-subtitle">Connect your social media platforms for automated content distribution after campaign approval.</div>
+        <div class="social-grid">
+          ${platforms.map(p => {
+            const cfg = socialConfig[p.key] || {};
+            const firstField = p.fields[0];
+            const connected = !!(cfg[firstField.id]);
+            return `<div class="social-card">
+              <div class="social-card-header">
+                <div class="social-card-icon ${p.key}">${p.icon}</div>
+                <div>
+                  <div class="social-card-name">${p.name}</div>
+                  <div class="social-card-desc">${p.desc}</div>
+                </div>
+              </div>
+              <div class="social-card-status">
+                <span class="staging-status-dot ${connected ? 'connected' : 'disconnected'}"></span>
+                <span style="color:${connected ? 'var(--interactive-success)' : 'var(--text-error)'}; font-size:12px">${connected ? 'Connected' : 'Not connected'}</span>
+                <span class="staging-saved-msg" id="social-saved-${p.key}"></span>
+              </div>
+              ${p.fields.map(f => `<div class="staging-connector-field">
+                <div class="staging-field-label">${f.label}</div>
+                <input class="staging-field-input" id="social-${p.key}-${f.id}" type="${f.type || 'text'}" placeholder="${f.hint || ''}" value="${escapeHtml(cfg[f.id] || '')}">
+              </div>`).join('')}
+              <div class="staging-connector-actions" style="margin-top:12px">
+                <button class="staging-btn primary" onclick="saveSocialPlatform('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})">Save</button>
+                <button class="staging-btn secondary" onclick="testSocialPlatform('${p.key}')">Test</button>
+                ${connected ? `<button class="staging-btn danger" onclick="disconnectSocial('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})">Disconnect</button>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
         </div>
-      `;
+      </div>`;
+      setActiveTab('social');
     }
 
-    // ===================== COMMAND TOAST =====================
-    let toastCommand = '';
-    function showToast(title, command) {
-      toastCommand = command;
-      document.getElementById('toast-title').textContent = title;
-      document.getElementById('toast-command').textContent = command;
-      document.getElementById('command-toast').classList.add('show');
-      const btn = document.getElementById('toast-btn');
-      btn.textContent = 'Copy';
-      btn.classList.remove('command-toast-copied');
-    }
-    function hideToast() { document.getElementById('command-toast').classList.remove('show'); }
-    function copyCommand() {
-      if (toastCommand) {
-        navigator.clipboard.writeText(toastCommand).then(() => {
-          const btn = document.getElementById('toast-btn');
-          btn.textContent = 'Copied!';
-          btn.classList.add('command-toast-copied');
-          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('command-toast-copied'); hideToast(); }, 2000);
-        });
+    async function saveSocialPlatform(key, fieldIds) {
+      const cfg = {};
+      fieldIds.forEach(f => { cfg[f] = document.getElementById('social-' + key + '-' + f).value.trim(); });
+      socialConfig[key] = cfg;
+      if (window.isCloudMode) {
+        await cloudAPI.saveDistConfig(key, cfg);
+      } else {
+        const configJson = JSON.stringify(socialConfig, null, 2);
+        copyToClipboard('echo ' + "'" + configJson + "'" + ' > ~/.marketing-pipeline/staging-config.json');
       }
+      showStagingSaved('social-saved-' + key);
+    }
+
+    async function testSocialPlatform(key) {
+      if (window.isCloudMode) {
+        const result = await cloudAPI.testDistPlatform(key);
+        alert(result.success ? 'Connection successful: ' + result.message : 'Failed: ' + result.message);
+      } else {
+        copyToClipboard('/marketing distribution test ' + key);
+      }
+    }
+
+    function disconnectSocial(key, fieldIds) {
+      if (!confirm('Disconnect ' + key + '?')) return;
+      socialConfig[key] = {};
+      if (window.isCloudMode) cloudAPI.saveDistConfig(key, {});
+      renderSocialView();
+    }
+
+    // ===================== STAGING AREA VIEW =====================
+    let stagingConfig = { drive: {}, telegram: {} };
+    let stagingCampaigns = [];
+    let stagingItems = []; // individual pieces for approval
+    let stagingTab = 'pending';
+    let stagingExpandedCards = new Set();
+
+    async function renderStagingView() {
+      const dashboard = document.getElementById('dashboard');
+      currentView = 'staging';
+
+      // Load saved config
+      try {
+        const r = await fetch('staging-config.json?t=' + Date.now());
+        if (r.ok) stagingConfig = await r.json();
+      } catch (e) {}
+
+      // Load campaigns from storage index for review queue
+      try {
+        const r2 = await fetch('storage-index.json?t=' + Date.now());
+        if (r2.ok) {
+          const data = await r2.json();
+          stagingCampaigns = (data.campaigns || []).map(c => ({
+            ...c,
+            reviewStatus: c.reviewStatus || 'pending'
+          }));
+        }
+      } catch (e) {}
+
+      const pending = stagingCampaigns.filter(c => c.reviewStatus === 'pending');
+      const approved = stagingCampaigns.filter(c => c.reviewStatus === 'approved');
+      const rejected = stagingCampaigns.filter(c => c.reviewStatus === 'rejected');
+
+      const driveConnected = !!(stagingConfig.drive && stagingConfig.drive.folder_id);
+      const tgConnected = !!(stagingConfig.telegram && stagingConfig.telegram.bot_token && stagingConfig.telegram.chat_id);
+
+      dashboard.innerHTML = `<div class="staging-view">
+        <div class="staging-title">Staging Area</div>
+        <div class="staging-subtitle">Review completed campaigns and approve content for distribution.</div>
+
+        <!-- Review Tabs -->
+        <div class="staging-tabs">
+          <button class="staging-tab ${stagingTab === 'pending' ? 'active' : ''}" onclick="switchStagingTab('pending')">
+            Pending Review${pending.length > 0 ? '<span class="staging-tab-badge">' + pending.length + '</span>' : ''}
+          </button>
+          <button class="staging-tab ${stagingTab === 'approved' ? 'active' : ''}" onclick="switchStagingTab('approved')">
+            Approved${approved.length > 0 ? '<span class="staging-tab-badge">' + approved.length + '</span>' : ''}
+          </button>
+          <button class="staging-tab ${stagingTab === 'rejected' ? 'active' : ''}" onclick="switchStagingTab('rejected')">
+            Rejected${rejected.length > 0 ? '<span class="staging-tab-badge">' + rejected.length + '</span>' : ''}
+          </button>
+        </div>
+
+        <!-- Review Queue -->
+        <div class="staging-review-list" id="staging-review-list"></div>
+
+        <!-- Drive & Telegram -->
+        <div class="staging-section-divider">
+          <div class="staging-section-title">Connections</div>
+          <div class="staging-section-subtitle">Google Drive for backup storage, Telegram for team notifications.</div>
+        </div>
+        <div class="staging-connectors">
+          <div class="staging-connector">
+            <div class="staging-connector-header">
+              <div class="staging-connector-icon drive">\uD83D\uDCC1</div>
+              <div>
+                <div class="staging-connector-name">Google Drive</div>
+                <div class="staging-connector-desc">Backup all generated content and research data</div>
+              </div>
+            </div>
+            <div class="staging-connector-body">
+              <div class="staging-connector-status">
+                <span class="staging-status-dot ${driveConnected ? 'connected' : 'disconnected'}"></span>
+                <span style="color:${driveConnected ? 'var(--interactive-success)' : 'var(--text-error)'}">${driveConnected ? 'Connected' : 'Not connected'}</span>
+                <span class="staging-saved-msg" id="drive-saved"></span>
+              </div>
+              <div class="staging-connector-field">
+                <div class="staging-field-label">Service Account JSON Key Path</div>
+                <input class="staging-field-input" id="drive-key-path" placeholder="/path/to/service-account.json" value="${escapeHtml(stagingConfig.drive.key_path || '')}">
+              </div>
+              <div class="staging-connector-field">
+                <div class="staging-field-label">Drive Folder ID</div>
+                <input class="staging-field-input" id="drive-folder-id" placeholder="1a2b3c4d5e6f..." value="${escapeHtml(stagingConfig.drive.folder_id || '')}">
+              </div>
+              <div class="staging-connector-field">
+                <label class="brainstorm-check-row" style="padding:0">
+                  <input type="checkbox" id="drive-auto-upload" ${stagingConfig.drive.auto_upload ? 'checked' : ''}> Auto-upload when pipeline completes
+                </label>
+              </div>
+            </div>
+            <div class="staging-connector-actions">
+              <button class="staging-btn primary" onclick="saveStagingDrive()">Save</button>
+              <button class="staging-btn secondary" onclick="testStagingDrive()">Test</button>
+              ${driveConnected ? '<button class="staging-btn danger" onclick="disconnectStaging(\'drive\')">Disconnect</button>' : ''}
+            </div>
+          </div>
+          <div class="staging-connector">
+            <div class="staging-connector-header">
+              <div class="staging-connector-icon telegram">\u2708</div>
+              <div>
+                <div class="staging-connector-name">Telegram</div>
+                <div class="staging-connector-desc">Send campaign updates to your team group</div>
+              </div>
+            </div>
+            <div class="staging-connector-body">
+              <div class="staging-connector-status">
+                <span class="staging-status-dot ${tgConnected ? 'connected' : 'disconnected'}"></span>
+                <span style="color:${tgConnected ? 'var(--interactive-success)' : 'var(--text-error)'}">${tgConnected ? 'Connected' : 'Not connected'}</span>
+                <span class="staging-saved-msg" id="tg-saved"></span>
+              </div>
+              <div class="staging-connector-field">
+                <div class="staging-field-label">Bot Token</div>
+                <input class="staging-field-input" id="tg-bot-token" type="password" placeholder="123456:ABC-DEF..." value="${escapeHtml(stagingConfig.telegram.bot_token || '')}">
+              </div>
+              <div class="staging-connector-field">
+                <div class="staging-field-label">Group Chat ID</div>
+                <input class="staging-field-input" id="tg-chat-id" placeholder="-1001234567890 or @groupname" value="${escapeHtml(stagingConfig.telegram.chat_id || '')}">
+              </div>
+              <div class="staging-connector-field">
+                <div class="staging-field-label">Notify on</div>
+                <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-complete" ${(stagingConfig.telegram.notify_complete !== false) ? 'checked' : ''}> Campaign completed</label>
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-approval" ${stagingConfig.telegram.notify_approval ? 'checked' : ''}> Content awaiting approval</label>
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-error" ${(stagingConfig.telegram.notify_error !== false) ? 'checked' : ''}> Pipeline errors</label>
+                </div>
+              </div>
+            </div>
+            <div class="staging-connector-actions">
+              <button class="staging-btn primary" onclick="saveStagingTelegram()">Save</button>
+              <button class="staging-btn secondary" onclick="testStagingTelegram()">Test</button>
+              ${tgConnected ? '<button class="staging-btn danger" onclick="disconnectStaging(\'telegram\')">Disconnect</button>' : ''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+      setActiveTab('staging');
+      renderStagingReviewList();
+    }
+
+    function switchStagingTab(tab) {
+      stagingTab = tab;
+      document.querySelectorAll('.staging-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.staging-tab[onclick*="${tab}"]`).classList.add('active');
+      renderStagingReviewList();
+    }
+
+    function renderStagingReviewList() {
+      const list = document.getElementById('staging-review-list');
+      // Merge campaign-level items into stagingItems if not already present
+      stagingCampaigns.forEach(c => {
+        (c.deliverables || []).forEach(d => {
+          const key = d.fullPath || d.path;
+          if (!stagingItems.find(s => s.key === key)) {
+            stagingItems.push({ key, name: d.name, campaign: c.name, category: d.category, size: d.size, servedPath: d.servedPath, mediaType: d.mediaType, reviewStatus: 'pending' });
+          }
+        });
+      });
+      const filtered = stagingItems.filter(s => s.reviewStatus === stagingTab);
+      if (filtered.length === 0) {
+        const msgs = { pending: 'No content awaiting review. Use the Review tab to send content here.', approved: 'No approved content yet.', rejected: 'No rejected content.' };
+        list.innerHTML = '<div class="staging-review-empty">' + (msgs[stagingTab] || 'No content.') + '</div>';
+        return;
+      }
+      // Bulk actions
+      const bulkHtml = stagingTab === 'pending' ? '<div style="display:flex;gap:8px;margin-bottom:12px"><button class="staging-approve-btn approve" onclick="bulkStagingAction(\'approved\')">Approve All (' + filtered.length + ')</button><button class="staging-approve-btn reject" onclick="bulkStagingAction(\'rejected\')">Reject All</button></div>' : '';
+      list.innerHTML = bulkHtml + filtered.map((item, i) => {
+        const idx = stagingItems.indexOf(item);
+        return '<div class="staging-review-card ' + item.reviewStatus + '">' +
+          '<div class="staging-review-header">' +
+            '<div class="staging-review-info">' +
+              '<span class="staging-review-status-dot ' + item.reviewStatus + '"></span>' +
+              '<div>' +
+                '<div class="staging-review-name">' + escapeHtml(item.name) + '</div>' +
+                '<div class="staging-review-meta"><span class="storage-card-badge ' + item.category + '">' + item.category + '</span> \u00B7 ' + escapeHtml(item.campaign) + ' \u00B7 ' + item.size + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="staging-review-actions">' +
+              (item.reviewStatus === 'pending' ? '<button class="staging-approve-btn approve" onclick="setStagingItemReview(' + idx + ',\'approved\')">Approve</button><button class="staging-approve-btn reject" onclick="setStagingItemReview(' + idx + ',\'rejected\')">Reject</button>' : '') +
+              (item.reviewStatus === 'approved' ? '<button class="staging-approve-btn reject" onclick="setStagingItemReview(' + idx + ',\'rejected\')">Revoke</button>' : '') +
+              (item.reviewStatus === 'rejected' ? '<button class="staging-approve-btn approve" onclick="setStagingItemReview(' + idx + ',\'approved\')">Approve</button>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function setStagingItemReview(idx, status) {
+      const item = stagingItems[idx];
+      if (window.isCloudMode && item.campaignId) {
+        const fn = status === 'approved' ? cloudAPI.approveItem : cloudAPI.rejectItem;
+        await fn.call(cloudAPI, item.campaignId, item.key);
+      }
+      item.reviewStatus = status;
+      renderStagingReviewList();
+      const pending = stagingItems.filter(s => s.reviewStatus === 'pending').length;
+      const approved = stagingItems.filter(s => s.reviewStatus === 'approved').length;
+      const rejected = stagingItems.filter(s => s.reviewStatus === 'rejected').length;
+      document.querySelectorAll('.staging-tab').forEach(t => {
+        if (t.textContent.includes('Pending')) t.innerHTML = 'Pending Review' + (pending > 0 ? '<span class="staging-tab-badge">' + pending + '</span>' : '');
+        if (t.textContent.includes('Approved')) t.innerHTML = 'Approved' + (approved > 0 ? '<span class="staging-tab-badge">' + approved + '</span>' : '');
+        if (t.textContent.includes('Rejected')) t.innerHTML = 'Rejected' + (rejected > 0 ? '<span class="staging-tab-badge">' + rejected + '</span>' : '');
+      });
+    }
+
+    async function bulkStagingAction(status) {
+      if (window.isCloudMode) {
+        const campaignIds = new Set(stagingItems.filter(s => s.reviewStatus === stagingTab && s.campaignId).map(s => s.campaignId));
+        for (const cid of campaignIds) {
+          if (status === 'approved') await cloudAPI.approveAll(cid);
+          else await cloudAPI.rejectAll(cid);
+        }
+      }
+      stagingItems.forEach(s => { if (s.reviewStatus === stagingTab) s.reviewStatus = status; });
+      renderStagingReviewList();
+    }
+
+    function saveStagingDrive() {
+      stagingConfig.drive = {
+        key_path: document.getElementById('drive-key-path').value.trim(),
+        folder_id: document.getElementById('drive-folder-id').value.trim(),
+        auto_upload: document.getElementById('drive-auto-upload').checked
+      };
+      saveStagingConfig();
+      showStagingSaved('drive-saved');
+    }
+
+    function saveStagingTelegram() {
+      stagingConfig.telegram = {
+        bot_token: document.getElementById('tg-bot-token').value.trim(),
+        chat_id: document.getElementById('tg-chat-id').value.trim(),
+        notify_complete: document.getElementById('tg-notify-complete').checked,
+        notify_approval: document.getElementById('tg-notify-approval').checked,
+        notify_error: document.getElementById('tg-notify-error').checked
+      };
+      saveStagingConfig();
+      showStagingSaved('tg-saved');
+    }
+
+    function saveStagingConfig() {
+      // Save config — since this is a static dashboard, copy the config command
+      const configJson = JSON.stringify(stagingConfig, null, 2);
+      copyToClipboard('echo ' + "'" + configJson + "'" + ' > ~/.marketing-pipeline/staging-config.json');
+    }
+
+    function showStagingSaved(id) {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '\u2713 Saved'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2500); }
+    }
+
+    function testStagingDrive() {
+      const keyPath = document.getElementById('drive-key-path').value.trim();
+      const folderId = document.getElementById('drive-folder-id').value.trim();
+      if (!keyPath || !folderId) { alert('Please fill in both fields first.'); return; }
+      copyToClipboard(`/marketing staging test-drive --key "${keyPath}" --folder "${folderId}"`);
+    }
+
+    function testStagingTelegram() {
+      const token = document.getElementById('tg-bot-token').value.trim();
+      const chatId = document.getElementById('tg-chat-id').value.trim();
+      if (!token || !chatId) { alert('Please fill in both Bot Token and Chat ID first.'); return; }
+      copyToClipboard(`/marketing staging test-telegram --token "${token}" --chat "${chatId}"`);
+    }
+
+    function disconnectStaging(service) {
+      if (!confirm('Disconnect ' + service + '? This will clear the saved credentials.')) return;
+      stagingConfig[service] = {};
+      saveStagingConfig();
+      renderStagingView();
+    }
+
+    // ===================== BRAINSTORM VIEW =====================
+    let brainstormSources = new Set();
+    let brainstormTypes = new Set(['blog-post', 'social-media']);
+    let brainstormData = [];
+    let brainstormGroupOpen = {};
+    let brainstormSelectedProvider = 'gemini';
+    let brainstormSelectedModel = '';
+    const brainstormProviders = {
+      gemini: {
+        name: 'Gemini',
+        icon: '\u2728',
+        desc: 'Google Gemini API — image generation via Imagen models',
+        apiKey: 'AIzaSyAn3VGUwz0f9zyScIvTPLnq774XqivB9Jk',
+        envVar: 'GEMINI_API_KEY',
+        models: [
+          { id: 'imagen-4.0-generate-001', label: 'Imagen 4.0' },
+          { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4.0 Fast' },
+          { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (inline image)' },
+          { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image' }
+        ]
+      },
+      qwen: {
+        name: 'Qwen (Alibaba)',
+        icon: '\uD83C\uDF10',
+        desc: 'Alibaba Cloud DashScope API — image generation via Qwen models',
+        apiKey: 'sk-29ae6692582049b28615412ed8a2e027',
+        envVar: 'DASHSCOPE_API_KEY',
+        models: [
+          { id: 'qwen-image-2.0-pro', label: 'Qwen Image 2.0 Pro (highest quality)' },
+          { id: 'qwen-image-max', label: 'Qwen Image Max' },
+          { id: 'qwen-image-plus', label: 'Qwen Image Plus' },
+          { id: 'z-image-turbo', label: 'Z-Image Turbo (fastest)' }
+        ]
+      }
+    };
+
+    async function renderBrainstormView() {
+      const dashboard = document.getElementById('dashboard');
+      currentView = 'brainstorm';
+      dashboard.innerHTML = `<div class="brainstorm-view">
+        <div class="brainstorm-title">Brainstorm</div>
+
+        <div class="brainstorm-section">
+          <div class="brainstorm-section-header">1. Select Research Data <span class="brainstorm-section-hint">Choose files to use as context</span></div>
+          <div id="brainstorm-sources">Loading...</div>
+        </div>
+
+        <div class="brainstorm-section">
+          <div class="brainstorm-section-header">2. Content to Generate</div>
+          <div class="brainstorm-types-grid" id="brainstorm-types"></div>
+        </div>
+
+        <div class="brainstorm-section">
+          <div class="brainstorm-section-header">3. Image Generation Model</div>
+          <div class="brainstorm-model-cards" id="brainstorm-model-cards"></div>
+        </div>
+
+        <div class="brainstorm-section">
+          <div class="brainstorm-section-header">4. Additional Direction <span class="brainstorm-section-hint">Optional</span></div>
+          <textarea class="brainstorm-brief-input" id="brainstorm-brief" placeholder="E.g. Focus on onboarding flow for crypto users, use a casual tone..."></textarea>
+        </div>
+
+        <div class="brainstorm-section">
+          <button class="brainstorm-generate-btn" id="brainstorm-gen-btn" onclick="submitBrainstorm()">Generate Content</button>
+        </div>
+
+        <div class="brainstorm-section">
+          <div class="brainstorm-section-header">Generated Media Gallery</div>
+          <div id="brainstorm-gallery">Loading...</div>
+        </div>
+      </div>`;
+      setActiveTab('brainstorm');
+      await loadBrainstormData();
+    }
+
+    async function loadBrainstormData() {
+      try {
+        const response = await fetch('storage-index.json?t=' + Date.now());
+        if (!response.ok) throw new Error('Not found');
+        const data = await response.json();
+        brainstormData = data.campaigns || [];
+        renderBrainstormSources();
+        renderBrainstormTypes();
+        renderBrainstormModelCards();
+        renderBrainstormGallery();
+      } catch (err) {
+        document.getElementById('brainstorm-sources').innerHTML = '<div class="brainstorm-gallery-empty">No data. Run a campaign first.</div>';
+        document.getElementById('brainstorm-gallery').innerHTML = '';
+      }
+    }
+
+    function renderBrainstormSources() {
+      const container = document.getElementById('brainstorm-sources');
+      const researchFiles = [];
+      brainstormData.forEach(c => {
+        const files = c.deliverables.filter(d => ['research', 'strategy', 'seo'].includes(d.category));
+        if (files.length > 0) researchFiles.push({ campaign: c, files });
+      });
+
+      if (researchFiles.length === 0) {
+        container.innerHTML = '<div class="brainstorm-gallery-empty">No research data found.</div>';
+        return;
+      }
+
+      container.innerHTML = researchFiles.map(({ campaign, files }) => {
+        const isOpen = brainstormGroupOpen[campaign.slug] !== false;
+        return `<div class="brainstorm-group">
+          <div class="brainstorm-group-header" onclick="toggleBrainstormGroup('${campaign.slug}')">
+            <span>${escapeHtml(campaign.name)}</span>
+            <span class="brainstorm-group-arrow ${isOpen ? 'open' : ''}" id="arrow-${campaign.slug}">\u25B6</span>
+          </div>
+          <div class="brainstorm-group-body ${isOpen ? '' : 'collapsed'}" id="group-${campaign.slug}">
+            ${files.map(d => {
+              const key = d.fullPath;
+              const checked = brainstormSources.has(key) ? 'checked' : '';
+              return `<label class="brainstorm-check-row">
+                <input type="checkbox" ${checked} onchange="toggleBrainstormSource('${escapeHtml(key)}')">
+                <span class="brainstorm-check-badge ${d.category}">${d.category}</span>
+                ${escapeHtml(d.name)} <span style="color:var(--text-faint);margin-left:auto;font-size:10px">${d.size}</span>
+              </label>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleBrainstormGroup(slug) {
+      brainstormGroupOpen[slug] = brainstormGroupOpen[slug] === false;
+      const body = document.getElementById('group-' + slug);
+      const arrow = document.getElementById('arrow-' + slug);
+      if (body) body.classList.toggle('collapsed');
+      if (arrow) arrow.classList.toggle('open');
+    }
+
+    function toggleBrainstormSource(key) {
+      if (brainstormSources.has(key)) brainstormSources.delete(key); else brainstormSources.add(key);
+    }
+
+    function renderBrainstormTypes() {
+      const types = [
+        { id: 'blog-post', label: 'Blog Post' },
+        { id: 'social-media', label: 'Social Media Pack' },
+        { id: 'email', label: 'Email Sequence' },
+        { id: 'landing-page', label: 'Landing Page' },
+        { id: 'seo-keywords', label: 'SEO Keywords' },
+        { id: 'images', label: 'Images' },
+        { id: 'videos', label: 'Videos' }
+      ];
+      document.getElementById('brainstorm-types').innerHTML = types.map(t => {
+        const sel = brainstormTypes.has(t.id) ? 'selected' : '';
+        return `<label class="brainstorm-type-option ${sel}" onclick="toggleBrainstormType('${t.id}', this)">
+          <input type="checkbox" ${brainstormTypes.has(t.id) ? 'checked' : ''} style="display:none"> ${t.label}
+        </label>`;
+      }).join('');
+    }
+
+    function toggleBrainstormType(type, el) {
+      if (brainstormTypes.has(type)) brainstormTypes.delete(type); else brainstormTypes.add(type);
+      if (el) el.classList.toggle('selected');
+    }
+
+    function renderBrainstormModelCards() {
+      const container = document.getElementById('brainstorm-model-cards');
+      container.innerHTML = Object.entries(brainstormProviders).map(([key, p]) => {
+        const selected = brainstormSelectedProvider === key;
+        const hasKey = !!p.apiKey;
+        const models = p.models;
+        const defaultModel = brainstormSelectedModel || models[0].id;
+        if (selected && !brainstormSelectedModel) brainstormSelectedModel = defaultModel;
+        return `<div class="brainstorm-model-card ${selected ? 'selected' : ''}" onclick="selectBrainstormProvider('${key}')">
+          <div class="brainstorm-model-card-header">
+            <span style="font-size:18px">${p.icon}</span>
+            <span class="brainstorm-model-card-name">${p.name}</span>
+            <span class="brainstorm-model-card-badge ${hasKey ? 'connected' : 'no-key'}">${hasKey ? 'API Key Set' : 'No Key'}</span>
+          </div>
+          <div class="brainstorm-model-card-desc">${p.desc}</div>
+          ${selected ? `<div class="brainstorm-model-card-models">
+            <select class="brainstorm-model-select" onchange="brainstormSelectedModel=this.value" onclick="event.stopPropagation()">
+              ${models.map(m => `<option value="${m.id}" ${brainstormSelectedModel === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
+            </select>
+          </div>` : `<div class="brainstorm-model-card-models">${models.length} models available</div>`}
+        </div>`;
+      }).join('');
+    }
+
+    function selectBrainstormProvider(key) {
+      brainstormSelectedProvider = key;
+      brainstormSelectedModel = brainstormProviders[key].models[0].id;
+      renderBrainstormModelCards();
+    }
+
+    function renderBrainstormGallery() {
+      const container = document.getElementById('brainstorm-gallery');
+      const media = [];
+      brainstormData.forEach(c => {
+        c.deliverables.forEach(d => {
+          if (d.mediaType && d.servedPath) {
+            media.push({ ...d, campaignName: c.name });
+          }
+        });
+      });
+
+      if (media.length === 0) {
+        container.innerHTML = '<div class="brainstorm-gallery-empty">No images or videos generated yet. Run a campaign with media generation enabled.</div>';
+        return;
+      }
+
+      container.innerHTML = `<div class="brainstorm-gallery-grid">${media.map(m => {
+        if (m.mediaType === 'image') {
+          return `<div class="brainstorm-media-card">
+            <img src="${m.servedPath}" alt="${escapeHtml(m.name)}" onclick="openBrainstormLightbox('${m.servedPath}')" loading="lazy">
+            <div class="brainstorm-media-info">
+              <div class="brainstorm-media-name">${escapeHtml(m.name)}</div>
+              <div class="brainstorm-media-meta"><span>${escapeHtml(m.campaignName)}</span><span>${m.size}</span></div>
+            </div>
+          </div>`;
+        } else {
+          return `<div class="brainstorm-media-card">
+            <video src="${m.servedPath}" preload="metadata" controls muted></video>
+            <div class="brainstorm-media-info">
+              <div class="brainstorm-media-name">${escapeHtml(m.name)}</div>
+              <div class="brainstorm-media-meta"><span>${escapeHtml(m.campaignName)}</span><span>${m.size}</span></div>
+            </div>
+          </div>`;
+        }
+      }).join('')}</div>`;
+    }
+
+    function openBrainstormLightbox(src) {
+      const lb = document.createElement('div');
+      lb.className = 'brainstorm-lightbox';
+      lb.onclick = () => lb.remove();
+      lb.innerHTML = `<img src="${src}">`;
+      document.body.appendChild(lb);
+    }
+
+    function submitBrainstorm() {
+      const brief = (document.getElementById('brainstorm-brief') || {}).value || '';
+      const types = Array.from(brainstormTypes);
+      const sources = Array.from(brainstormSources);
+
+      if (types.length === 0) { alert('Please select at least one content type to generate.'); return; }
+
+      const provider = brainstormProviders[brainstormSelectedProvider];
+      const hasImages = types.includes('images') || types.includes('videos');
+
+      let prompt = '';
+      if (sources.length > 0) {
+        prompt += 'Using the following research data as context: ' + sources.join(', ') + '. ';
+      }
+      if (brief.trim()) {
+        prompt += brief.trim() + '. ';
+      }
+      if (hasImages && brainstormSelectedModel) {
+        prompt += 'For image generation use ' + brainstormSelectedProvider + ' model ' + brainstormSelectedModel + '. ';
+      }
+      prompt += 'Generate: ' + types.join(', ') + '.';
+
+      let envPrefix = '';
+      if (hasImages && provider && provider.apiKey) {
+        envPrefix = 'export ' + provider.envVar + '="' + provider.apiKey + '" && ';
+      }
+
+      const command = envPrefix + `/marketing content "${prompt}"`;
+      copyToClipboard(command, document.getElementById('brainstorm-gen-btn'));
+    }
+
+    // ===================== REVIEW VIEW =====================
+    let reviewData = [];
+    let reviewSelected = new Set();
+    let reviewCampaignFilter = 'all';
+
+    async function renderReviewView() {
+      const dashboard = document.getElementById('dashboard');
+      currentView = 'review';
+      reviewSelected.clear();
+      dashboard.innerHTML = `<div class="review-view">
+        <div class="review-title">Review</div>
+        <div class="review-subtitle">Preview generated content and select pieces to send for team approval.</div>
+        <select class="review-campaign-select" id="review-campaign-select" onchange="reviewCampaignFilter=this.value; renderReviewCards()">
+          <option value="all">All Campaigns</option>
+        </select>
+        <div class="review-grid" id="review-grid">Loading...</div>
+      </div>`;
+      setActiveTab('review');
+      await loadReviewData();
+    }
+
+    async function loadReviewData() {
+      try {
+        const r = await fetch('storage-index.json?t=' + Date.now());
+        if (!r.ok) throw new Error('Not found');
+        const data = await r.json();
+        reviewData = data.campaigns || [];
+        const select = document.getElementById('review-campaign-select');
+        reviewData.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.slug; opt.textContent = c.name;
+          if (reviewCampaignFilter === c.slug) opt.selected = true;
+          select.appendChild(opt);
+        });
+        renderReviewCards();
+      } catch (e) {
+        document.getElementById('review-grid').innerHTML = '<div class="review-card" style="padding:40px;text-align:center;color:var(--text-faint)">No content found. Run a campaign first.</div>';
+      }
+    }
+
+    function renderReviewCards() {
+      const grid = document.getElementById('review-grid');
+      let items = [];
+      const campaigns = reviewCampaignFilter === 'all' ? reviewData : reviewData.filter(c => c.slug === reviewCampaignFilter);
+      campaigns.forEach(c => {
+        c.deliverables.forEach(d => {
+          items.push({ ...d, campaignName: c.name, campaignSlug: c.slug });
+        });
+      });
+      if (items.length === 0) { grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-faint)">No deliverables found.</div>'; return; }
+      grid.innerHTML = items.map(d => {
+        const key = d.fullPath || d.path;
+        const sel = reviewSelected.has(key);
+        let preview = '';
+        if (d.mediaType === 'image' && d.servedPath) {
+          preview = '<div class="review-card-preview"><img src="' + d.servedPath + '" loading="lazy"></div>';
+        } else if (d.mediaType === 'video' && d.servedPath) {
+          preview = '<div class="review-card-preview"><video src="' + d.servedPath + '" preload="metadata" muted controls></video></div>';
+        } else {
+          preview = '<div class="review-card-preview">' + escapeHtml(d.name) + ' \u2014 ' + d.size + '</div>';
+        }
+        return '<div class="review-card ' + (sel ? 'selected' : '') + '" onclick="toggleReviewSelect(\'' + escapeHtml(key) + '\', this)">' + preview + '<div class="review-card-info"><div class="review-card-name">' + escapeHtml(d.name) + '</div><div class="review-card-meta"><span class="storage-card-badge ' + d.category + '">' + d.category + '</span><span class="storage-card-campaign">' + escapeHtml(d.campaignName) + '</span><span class="storage-card-size">' + d.size + '</span></div></div></div>';
+      }).join('');
+      updateReviewBar();
+    }
+
+    function toggleReviewSelect(key, el) {
+      if (reviewSelected.has(key)) reviewSelected.delete(key); else reviewSelected.add(key);
+      if (el) el.classList.toggle('selected');
+      updateReviewBar();
+    }
+
+    function updateReviewBar() {
+      let bar = document.getElementById('review-actions-bar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'review-actions-bar';
+        bar.className = 'review-actions-bar';
+        bar.innerHTML = '<span><strong id="review-count">0</strong> pieces selected</span><div style="display:flex;gap:8px"><button class="staging-btn secondary" onclick="reviewSelected.clear();renderReviewCards()">Clear</button><button class="staging-btn primary" onclick="sendToStaging()">Send to Staging for Approval</button></div>';
+        document.body.appendChild(bar);
+      }
+      const count = reviewSelected.size;
+      document.getElementById('review-count').textContent = count;
+      bar.classList.toggle('show', count > 0);
+    }
+
+    function sendToStaging() {
+      if (reviewSelected.size === 0) return;
+      const items = Array.from(reviewSelected);
+      // Add selected items to staging pending list
+      items.forEach(key => {
+        if (!stagingItems.find(s => s.key === key)) {
+          const d = findDeliverableByKey(key);
+          if (d) stagingItems.push({ key, name: d.name, campaign: d.campaignName, category: d.category, size: d.size, servedPath: d.servedPath, mediaType: d.mediaType, reviewStatus: 'pending' });
+        }
+      });
+      reviewSelected.clear();
+      renderReviewCards();
+      copyToClipboard('Sent ' + items.length + ' pieces to Staging Area for approval');
+      switchView('staging');
+    }
+
+    function findDeliverableByKey(key) {
+      for (const c of reviewData) {
+        for (const d of c.deliverables) {
+          if ((d.fullPath || d.path) === key) return { ...d, campaignName: c.name };
+        }
+      }
+      return null;
+    }
+
+    // ===================== STORAGE VIEW =====================
+    let storageData = [];
+    let storageCampaignFilter = 'all';
+    let storageCategoryFilter = 'all';
+    let storageSelected = new Set();
+
+    async function renderStorageView() {
+      const dashboard = document.getElementById('dashboard');
+      currentView = 'storage';
+      dashboard.innerHTML = `<div class="storage-view">
+        <div class="storage-header"><span class="storage-title">Storage</span></div>
+        <div class="storage-campaign-tabs" id="storage-campaign-tabs"></div>
+        <div class="storage-category-chips" id="storage-category-chips"></div>
+        <div class="storage-grid" id="storage-grid">Loading...</div>
+      </div>`;
+      setActiveTab('storage');
+      storageSelected.clear();
+      updateStorageActionsBar();
+      await loadStorageIndex();
+    }
+
+    async function loadStorageIndex() {
+      try {
+        if (window.isCloudMode) {
+          const campaigns = await cloudAPI.listCampaigns();
+          storageData = [];
+          for (const c of campaigns) {
+            const detail = await cloudAPI.getCampaign(c.id);
+            if (detail) {
+              storageData.push({
+                name: detail.name || c.name, slug: detail.slug || c.slug, mode: detail.mode || c.mode,
+                status: detail.status || c.status, date: (detail.created_at || '').split('T')[0],
+                deliverables: (detail.deliverables || []).map(d => ({
+                  name: d.name, path: d.path, fullPath: d.path, size: d.size_bytes ? Math.round(d.size_bytes/1024) + ' KB' : '?',
+                  category: d.path.startsWith('01-') ? 'research' : d.path.startsWith('02-') ? 'strategy' : d.path.startsWith('03-') ? 'content' : d.path.startsWith('04-') ? 'seo' : d.path.startsWith('05-') ? 'review' : 'other',
+                  status: 'done', mediaType: d.mime_type && d.mime_type.startsWith('image') ? 'image' : d.mime_type && d.mime_type.startsWith('video') ? 'video' : null,
+                  cloudId: d.id, campaignId: c.id
+                }))
+              });
+            }
+          }
+        } else {
+          const response = await fetch('storage-index.json?t=' + Date.now());
+          if (!response.ok) throw new Error('Not found');
+          const data = await response.json();
+          storageData = data.campaigns || [];
+        }
+        renderStorageCampaignTabs();
+        renderStorageCategoryChips();
+        renderStorageCards();
+      } catch (err) {
+        document.getElementById('storage-grid').innerHTML = '<div class="storage-empty"><h3>No data found</h3><p>Run a marketing campaign first.</p></div>';
+      }
+    }
+
+    function renderStorageCampaignTabs() {
+      const tabs = document.getElementById('storage-campaign-tabs');
+      const names = [{ slug: 'all', name: 'All Campaigns' }, ...storageData.map(c => ({ slug: c.slug, name: c.name }))];
+      tabs.innerHTML = names.map(t =>
+        `<button class="storage-campaign-tab ${storageCampaignFilter === t.slug ? 'active' : ''}" onclick="filterStorageCampaign('${t.slug}')">${escapeHtml(t.name)}</button>`
+      ).join('');
+    }
+
+    function renderStorageCategoryChips() {
+      const chips = document.getElementById('storage-category-chips');
+      const categories = ['all', 'research', 'strategy', 'content', 'seo', 'review', 'brief', 'final'];
+      chips.innerHTML = categories.map(c =>
+        `<button class="storage-chip ${storageCategoryFilter === c ? 'active' : ''}" onclick="filterStorageCategory('${c}')">${c}</button>`
+      ).join('');
+    }
+
+    function getFilteredDeliverables() {
+      let items = [];
+      const campaigns = storageCampaignFilter === 'all' ? storageData : storageData.filter(c => c.slug === storageCampaignFilter);
+      campaigns.forEach(c => {
+        c.deliverables.forEach(d => {
+          items.push({ ...d, campaignName: c.name, campaignSlug: c.slug });
+        });
+      });
+      if (storageCategoryFilter !== 'all') {
+        items = items.filter(d => d.category === storageCategoryFilter);
+      }
+      return items;
+    }
+
+    function renderStorageCards() {
+      const grid = document.getElementById('storage-grid');
+      const items = getFilteredDeliverables();
+      if (items.length === 0) {
+        grid.innerHTML = `<div class="storage-empty"><h3>No deliverables found</h3><p>Try a different filter.</p></div>`;
+        return;
+      }
+      grid.innerHTML = items.map((d, i) => {
+        const key = d.fullPath || (d.campaignSlug + '/' + d.path);
+        const isSelected = storageSelected.has(key);
+        return `<div class="storage-card ${isSelected ? 'selected' : ''}" onclick="toggleStorageSelect('${escapeHtml(key)}', this)" title="${escapeHtml(d.fullPath || d.path)}">
+          <div class="storage-card-name">${escapeHtml(d.name)}</div>
+          <div class="storage-card-meta">
+            <span class="storage-card-badge ${d.category}">${d.category}</span>
+            <span class="storage-card-campaign">${escapeHtml(d.campaignName)}</span>
+            <span class="storage-card-size">${d.size}</span>
+          </div>
+          <div class="storage-card-path">${escapeHtml(d.fullPath || d.path)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function filterStorageCampaign(slug) {
+      storageCampaignFilter = slug;
+      renderStorageCampaignTabs();
+      renderStorageCards();
+    }
+
+    function filterStorageCategory(category) {
+      storageCategoryFilter = category;
+      renderStorageCategoryChips();
+      renderStorageCards();
+    }
+
+    function toggleStorageSelect(key, el) {
+      if (storageSelected.has(key)) { storageSelected.delete(key); } else { storageSelected.add(key); }
+      if (el) el.classList.toggle('selected');
+      updateStorageActionsBar();
+    }
+
+    function clearStorageSelection() {
+      storageSelected.clear();
+      document.querySelectorAll('.storage-card.selected').forEach(c => c.classList.remove('selected'));
+      updateStorageActionsBar();
+    }
+
+    function updateStorageActionsBar() {
+      const bar = document.getElementById('storage-actions-bar');
+      const count = storageSelected.size;
+      document.getElementById('storage-selected-count').textContent = count;
+      bar.classList.toggle('show', count > 0);
+    }
+
+    function generateFromSelected() {
+      if (storageSelected.size === 0) return;
+      const paths = Array.from(storageSelected);
+      const command = `/marketing content "Generate content using the following research data as context: ${paths.join(', ')}"`;
+      copyToClipboard(command);
+    }
+
+    // ===================== CLOUD STATUS =====================
+    function updateCloudStatus(connected) {
+      const dot = document.getElementById('status-dot');
+      const refresh = document.getElementById('status-refresh');
+      if (dot && connected) {
+        dot.style.display = '';
+        dot.style.background = connected ? 'var(--interactive-success)' : 'var(--text-error)';
+      }
+      if (refresh) {
+        refresh.textContent = connected ? 'Cloud: ' + (cloudAPI.user ? cloudAPI.user.email : 'Connected') : 'Cloud: Disconnected';
+      }
+    }
+
+    // ===================== COPY TO CLIPBOARD =====================
+    let copyNotifyTimer = null;
+    function copyToClipboard(text, btnEl) {
+      if (!navigator.clipboard) { prompt('Copy this command:', text); return; }
+      navigator.clipboard.writeText(text).then(() => {
+        const notify = document.getElementById('copy-notify');
+        notify.textContent = '\u2713 Copied to clipboard \u2014 paste in Claude Code';
+        notify.classList.add('show');
+        if (copyNotifyTimer) clearTimeout(copyNotifyTimer);
+        copyNotifyTimer = setTimeout(() => notify.classList.remove('show'), 2500);
+        if (btnEl) {
+          const orig = btnEl.textContent;
+          btnEl.textContent = '\u2713 Copied';
+          setTimeout(() => { btnEl.textContent = orig; }, 1500);
+        }
+      });
     }
 
     // ===================== UTILITIES =====================
     function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
     async function fetchJson(url) { const response = await fetch(url + '?t=' + Date.now()); if (!response.ok) throw new Error('Failed to fetch: ' + url); return response.json(); }
 
+    // ===================== SIDEBAR TOGGLE =====================
+    function toggleSidebar() {
+      const sidebar = document.getElementById('workspace-sidebar');
+      if (sidebar) sidebar.classList.toggle('collapsed');
+    }
+
     // ===================== INIT =====================
     document.addEventListener('DOMContentLoaded', initViewRouter);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeBatchDetail(); hideToast(); } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeBatchDetail(); } });
   </script>
 </body>
 </html>

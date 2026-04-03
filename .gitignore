@@ -2,3 +2,9 @@ node_modules/
 cloud/self-hosted/supabase/
 .env
 *.log
+test-content-gen/
+test-social-research/
+.DS_Store
+*.mp4
+assets/storage-index.json
+SESSION-NOTES.md
