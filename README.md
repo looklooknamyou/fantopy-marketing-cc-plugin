@@ -1,6 +1,12 @@
-# Marketing Pipeline Plugin for Claude Code
+# Marketing Pipeline Plugin for Claude Code, Codex, and OpenCode
 
 An autonomous multi-agent marketing pipeline that orchestrates 9+ specialized AI agents to produce complete marketing campaigns — from research through content creation, motion graphics video production, AI-generated images and video clips, SEO optimization, and quality review — all from a single command. Supports both **one-shot** pipelines (run once, done) and **sustained** campaigns (auto-generate content on a recurring schedule for weeks/months).
+
+This repo now ships client surfaces for:
+
+- **Claude Code** via `.claude-plugin/` and `/marketing` command files
+- **Codex** via `.codex-plugin/plugin.json` and `skills/marketing-pipeline/SKILL.md`
+- **OpenCode** via `plugins/marketing-pipeline.js` (repo plugin auto-load) and optional global plugin registration
 
 ## What It Does
 
@@ -60,6 +66,14 @@ marketing-output/your-campaign-slug/
 
 ## Installation
 
+### Client Support
+
+| Client | Integration Surface | Notes |
+|--------|---------------------|-------|
+| Claude Code | `.claude-plugin/` + `commands/*.md` | Full slash-command surface |
+| Codex | `.codex-plugin/plugin.json` + `skills/marketing-pipeline/` | Skill-driven plugin packaging |
+| OpenCode | `plugins/marketing-pipeline.js` | Auto-loads when OpenCode runs in this repo |
+
 ### Quick Install
 
 ```bash
@@ -111,6 +125,56 @@ Restart Claude Code, then type:
 ```
 
 You should see the help text with available commands.
+
+### Codex
+
+This repo includes a Codex plugin manifest at `.codex-plugin/plugin.json` and a repo-scoped skill at `skills/marketing-pipeline/SKILL.md`.
+
+To register it as a local Codex plugin:
+
+1. Symlink or copy the repo to `~/plugins/marketing-pipeline`
+2. Add a local marketplace entry in `~/.agents/plugins/marketplace.json`
+3. Restart Codex
+
+Example marketplace entry:
+
+```json
+{
+  "name": "local-plugins",
+  "interface": {
+    "displayName": "Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "marketing-pipeline",
+      "source": {
+        "source": "local",
+        "path": "./plugins/marketing-pipeline"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
+```
+
+### OpenCode
+
+This repo includes `plugins/marketing-pipeline.js`. OpenCode automatically scans repo plugins from `plugin/*.js` and `plugins/*.js`, so opening this repo in OpenCode is enough to load the project-specific context plugin.
+
+Optional global registration can be added in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "/absolute/path/to/marketing-pipeline-plugin/plugins/marketing-pipeline.js"
+  ]
+}
+```
 
 ## Commands
 
@@ -320,11 +384,18 @@ The dashboard polls `pipeline-status.json` every 2.5 seconds and requires no ext
 
 ```
 marketing-pipeline/
+├── .codex-plugin/
+│   └── plugin.json              # Codex plugin metadata
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata and registration
 ├── agents/
 │   ├── marketing-orchestrator.md # Core orchestrator (opus model)
 │   └── gemini-media-producer.md  # AI media generation agent (Gemini API)
+├── skills/
+│   └── marketing-pipeline/
+│       └── SKILL.md             # Codex skill surface for repo workflows
+├── plugins/
+│   └── marketing-pipeline.js    # OpenCode repo plugin
 ├── commands/
 │   ├── marketing.md             # Main router command
 │   ├── marketing-campaign.md    # Full funnel shortcut
@@ -357,7 +428,7 @@ marketing-pipeline/
 
 ## Requirements
 
-- **Claude Code** with plugin support
+- **Claude Code**, **Codex**, or **OpenCode**
 - **Python 3** (for the dashboard HTTP server — pre-installed on macOS/Linux)
 - **Node.js 18+** (for Remotion video rendering)
 - **`GEMINI_API_KEY`** environment variable (for AI image/video generation via Gemini API — get one at [ai.google.dev](https://ai.google.dev/))

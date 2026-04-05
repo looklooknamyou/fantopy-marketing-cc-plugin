@@ -57,6 +57,7 @@ def generate_image(client, prompt, aspect_ratio="16:9", output_path="image.png")
             contents=[prompt],
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE"],
+                image_config=types.ImageConfig(aspect_ratio=aspect_ratio),
             ),
         )
 

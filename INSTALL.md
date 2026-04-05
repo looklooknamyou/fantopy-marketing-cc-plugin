@@ -1,8 +1,14 @@
 # Installation Guide
 
+This repo now exposes three client surfaces:
+
+- **Claude Code**: `.claude-plugin/` plus `/marketing` command files
+- **Codex**: `.codex-plugin/plugin.json` plus `skills/marketing-pipeline/SKILL.md`
+- **OpenCode**: `plugins/marketing-pipeline.js`
+
 ## Prerequisites
 
-1. **Claude Code** installed and working
+1. **Claude Code**, **Codex**, or **OpenCode** installed and working
 2. **Python 3** available (for dashboard server) — run `python3 --version` to check
 3. **Node.js 18+** available (for cloud backend and scripts) — run `node --version` to check
 4. **Marketing subagents** installed in `~/.claude/agents/`. You need these agent definition files:
@@ -21,7 +27,9 @@
    rm -rf /tmp/awesome-claude-code-subagents
    ```
 
-## Step 1: Copy Plugin Files
+## Claude Code
+
+### Step 1: Copy Plugin Files
 
 ```bash
 # Create plugin directory
@@ -58,7 +66,7 @@ cloud/supabase/migrations/001_initial.sql
 cloud/supabase/migrations/002_approval.sql
 ```
 
-## Step 2: Register the Slash Commands
+### Step 2: Register the Slash Commands
 
 Plugin commands are namespaced by default (e.g., `/marketing-pipeline:marketing`). To use the shorter `/marketing` format, symlink the commands to your global commands directory:
 
@@ -86,7 +94,7 @@ marketing-research.md -> ...
 marketing-status.md -> ...
 ```
 
-## Step 3: Register the Plugin
+### Step 3: Register the Plugin
 
 Edit `~/.claude/plugins/installed_plugins.json`. If the file doesn't exist, create it.
 
@@ -113,11 +121,11 @@ Replace `/YOUR/HOME/` with your actual home directory path (e.g., `/Users/yourna
 
 If the file already has other plugins, add the `"marketing-pipeline@local"` key alongside them inside the existing `"plugins"` object.
 
-## Step 4: Restart Claude Code
+### Step 4: Restart Claude Code
 
 Close and reopen Claude Code for the plugin to load.
 
-## Step 5: Verify
+### Step 5: Verify
 
 Type `/marketing` in Claude Code. You should see the help menu:
 
@@ -146,6 +154,80 @@ Cloud & Collaboration:
   /marketing share <slug>       - Upload a local campaign to cloud
   /marketing browse             - Browse team campaigns from cloud
 ```
+
+## Codex
+
+Codex uses the manifest at `.codex-plugin/plugin.json` and the skill in `skills/marketing-pipeline/SKILL.md`.
+
+### Install as a local Codex plugin
+
+```bash
+mkdir -p ~/plugins
+ln -sfn /absolute/path/to/marketing-pipeline-plugin ~/plugins/marketing-pipeline
+mkdir -p ~/.agents/plugins
+```
+
+Create or update `~/.agents/plugins/marketplace.json`:
+
+```json
+{
+  "name": "local-plugins",
+  "interface": {
+    "displayName": "Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "marketing-pipeline",
+      "source": {
+        "source": "local",
+        "path": "./plugins/marketing-pipeline"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
+```
+
+If you already have a marketplace file, append the `marketing-pipeline` entry instead of replacing the entire document.
+
+### Verify in Codex
+
+- Restart Codex
+- Confirm the plugin appears with the display name `Marketing Pipeline`
+- Start a session in this repo and confirm the `marketing-pipeline` skill is available
+
+## OpenCode
+
+OpenCode automatically loads repo plugins from `plugin/*.js` and `plugins/*.js`. This repo now ships `plugins/marketing-pipeline.js`, so opening the repo directly in OpenCode is enough to enable it.
+
+### Repo-local usage
+
+```bash
+opencode /absolute/path/to/marketing-pipeline-plugin
+```
+
+### Optional global registration
+
+Create or update `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "/absolute/path/to/marketing-pipeline-plugin/plugins/marketing-pipeline.js"
+  ]
+}
+```
+
+### Verify in OpenCode
+
+- Restart OpenCode or reopen the repo
+- Start a session in this repo
+- Confirm the assistant understands the `/marketing` workflow, orchestrator, dashboard, and cloud layout without re-explaining the repo
 
 ---
 

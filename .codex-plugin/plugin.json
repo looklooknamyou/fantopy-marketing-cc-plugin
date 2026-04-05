@@ -1,0 +1,42 @@
+{
+  "name": "marketing-pipeline",
+  "version": "1.0.0",
+  "description": "Autonomous marketing campaign orchestration with research, strategy, content, SEO, review, dashboard, and cloud collaboration flows.",
+  "author": {
+    "name": "User",
+    "url": "https://github.com/looklooknamyou/fantopy-marketing-cc-plugin"
+  },
+  "homepage": "https://github.com/looklooknamyou/fantopy-marketing-cc-plugin",
+  "repository": "https://github.com/looklooknamyou/fantopy-marketing-cc-plugin",
+  "license": "MIT",
+  "keywords": [
+    "marketing",
+    "campaigns",
+    "content",
+    "seo",
+    "research",
+    "dashboard"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Marketing Pipeline",
+    "shortDescription": "Run multi-agent campaign and content operations",
+    "longDescription": "Plan, generate, review, and monitor full-funnel marketing campaigns with coordinated research, strategy, content, SEO, dashboard, and cloud collaboration workflows.",
+    "developerName": "User",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/looklooknamyou/fantopy-marketing-cc-plugin",
+    "defaultPrompt": [
+      "Plan a full-funnel campaign from a product brief",
+      "Review the dashboard, cloud sync, and team settings flow",
+      "Trace a sustained campaign batch from calendar to output"
+    ],
+    "brandColor": "#12A150",
+    "composerIcon": "./assets/marketing-pipeline-icon.svg",
+    "logo": "./assets/marketing-pipeline-icon.svg",
+    "screenshots": []
+  }
+}

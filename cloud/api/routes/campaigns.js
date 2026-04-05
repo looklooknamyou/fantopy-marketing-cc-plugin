@@ -3,7 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const { authMiddleware, teamMemberMiddleware } = require('../middleware/auth');
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 const VALID_MODES = ['full-funnel', 'content-production', 'market-intelligence'];
 

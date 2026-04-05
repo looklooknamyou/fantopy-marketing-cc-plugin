@@ -10,6 +10,9 @@ router.use(authMiddleware);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_PLATFORMS = ['reddit', 'twitter', 'telegram', 'discord'];
 const MAX_COMMENT_LENGTH = 5000;
+const OUTPUT_BASE_DIR = process.env.MARKETING_OUTPUT_DIR
+  ? path.resolve(process.env.MARKETING_OUTPUT_DIR)
+  : path.resolve(__dirname, '..', '..', '..', 'marketing-output');
 
 // Helper: validate campaignId and verify team membership
 async function validateCampaignAccess(req, res, fields) {
@@ -183,11 +186,11 @@ router.post('/:campaignId/sync-local', async (req, res) => {
       return res.status(404).json({ error: 'No approval status found' });
     }
 
-    // Resolve output dir relative to marketing-output
-    const outputDir = path.resolve('./marketing-output', campaign.slug);
+    // Resolve output dir relative to the repo-level marketing-output directory.
+    const outputDir = path.resolve(OUTPUT_BASE_DIR, campaign.slug);
 
     // Verify the resolved path is within marketing-output
-    const baseDir = path.resolve('./marketing-output');
+    const baseDir = OUTPUT_BASE_DIR;
     if (!outputDir.startsWith(baseDir + path.sep) && outputDir !== baseDir) {
       return res.status(400).json({ error: 'Invalid output directory' });
     }

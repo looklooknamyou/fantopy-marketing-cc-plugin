@@ -8,7 +8,7 @@
  * Exits 1 when all items are rejected or timeout reached.
  * Exits 2 on usage error.
  *
- * The orchestrator wraps this in: timeout 600 node approval-poll.js ...
+ * The orchestrator wraps this in a 10-minute external timeout.
  */
 
 const fs = require('fs');

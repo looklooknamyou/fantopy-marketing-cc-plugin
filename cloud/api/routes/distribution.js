@@ -7,23 +7,72 @@ const http = require('http');
 const crypto = require('crypto');
 const { authMiddleware } = require('../middleware/auth');
 
-const CONFIG_PATH = path.join(process.env.HOME, '.marketing-pipeline', 'distribution.json');
-const CONFIG_DIR = path.dirname(CONFIG_PATH);
+const HOME_DIR = process.env.HOME || process.env.USERPROFILE;
+const CONFIG_ROOT = path.join(HOME_DIR, '.marketing-pipeline', 'distribution-cloud');
+const TEAM_ID_RE = /^[0-9a-f-]{36}$/i;
 
 // All distribution routes require authentication
 router.use(authMiddleware);
 
-// Helper: read config file
-function readConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) return null;
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+function getTeamId(req) {
+  return req.query.team_id || req.body.team_id || null;
 }
 
-// Helper: write config file with restricted permissions
-function writeConfig(config) {
-  if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-  fs.chmodSync(CONFIG_PATH, 0o600);
+function getConfigPath(teamId) {
+  if (!TEAM_ID_RE.test(teamId || '')) return null;
+  return path.join(CONFIG_ROOT, `${teamId}.json`);
+}
+
+function readConfig(teamId) {
+  const configPath = getConfigPath(teamId);
+  if (!configPath || !fs.existsSync(configPath)) return null;
+  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+}
+
+function writeConfig(teamId, config) {
+  const configPath = getConfigPath(teamId);
+  if (!configPath) throw new Error('Invalid team ID');
+  if (!fs.existsSync(CONFIG_ROOT)) fs.mkdirSync(CONFIG_ROOT, { recursive: true });
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.chmodSync(configPath, 0o600);
+}
+
+function deleteConfig(teamId) {
+  const configPath = getConfigPath(teamId);
+  if (configPath && fs.existsSync(configPath)) {
+    fs.unlinkSync(configPath);
+  }
+}
+
+async function requireTeamAccess(req, res, opts = {}) {
+  const teamId = getTeamId(req);
+  if (!teamId) {
+    res.status(400).json({ error: 'team_id is required' });
+    return null;
+  }
+  if (!TEAM_ID_RE.test(teamId)) {
+    res.status(400).json({ error: 'Invalid team_id format' });
+    return null;
+  }
+
+  const { data: membership, error } = await req.supabase
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (error || !membership) {
+    res.status(403).json({ error: 'Not a member of this team' });
+    return null;
+  }
+
+  if (opts.write && !['owner', 'admin'].includes(membership.role)) {
+    res.status(403).json({ error: 'Only owners and admins can manage distribution credentials' });
+    return null;
+  }
+
+  return { teamId, role: membership.role, canEdit: ['owner', 'admin'].includes(membership.role) };
 }
 
 // Helper: mask sensitive values for display
@@ -78,55 +127,69 @@ function httpRequest(url, opts = {}) {
 }
 
 // GET /api/distribution/config — read config (secrets masked)
-router.get('/config', (req, res) => {
-  const config = readConfig();
+router.get('/config', async (req, res) => {
+  const access = await requireTeamAccess(req, res);
+  if (!access) return;
+  const config = readConfig(access.teamId);
   if (!config) {
-    return res.json({ configured: false, platforms: {} });
+    return res.json({ configured: false, platforms: {}, role: access.role, can_edit: access.canEdit });
   }
-  return res.json({ configured: true, platforms: maskConfig(config) });
+  return res.json({ configured: true, platforms: maskConfig(config), role: access.role, can_edit: access.canEdit });
 });
 
 // GET /api/distribution/config/raw — read raw config (for pre-filling forms)
 // Returns actual values — only accessible to authenticated users
-router.get('/config/raw', (req, res) => {
-  const config = readConfig();
+router.get('/config/raw', async (req, res) => {
+  const access = await requireTeamAccess(req, res, { write: true });
+  if (!access) return;
+  const config = readConfig(access.teamId);
   if (!config) {
-    return res.json({ configured: false, platforms: {} });
+    return res.json({ configured: false, platforms: {}, role: access.role, can_edit: access.canEdit });
   }
-  return res.json({ configured: true, platforms: config });
+  return res.json({ configured: true, platforms: config, role: access.role, can_edit: access.canEdit });
 });
 
 // PUT /api/distribution/config/:platform — save one platform's config
-router.put('/config/:platform', (req, res) => {
+router.put('/config/:platform', async (req, res) => {
   const { platform } = req.params;
   const validPlatforms = ['reddit', 'twitter', 'telegram', 'discord'];
   if (!validPlatforms.includes(platform)) {
     return res.status(400).json({ error: 'Invalid platform. Must be: ' + validPlatforms.join(', ') });
   }
 
-  const config = readConfig() || {};
-  config[platform] = req.body;
-  writeConfig(config);
+  const access = await requireTeamAccess(req, res, { write: true });
+  if (!access) return;
+
+  const config = readConfig(access.teamId) || {};
+  const nextConfig = { ...req.body };
+  delete nextConfig.team_id;
+  config[platform] = nextConfig;
+  writeConfig(access.teamId, config);
 
   return res.json({ success: true, platform });
 });
 
 // DELETE /api/distribution/config/:platform — remove a platform's config
-router.delete('/config/:platform', (req, res) => {
+router.delete('/config/:platform', async (req, res) => {
   const { platform } = req.params;
-  const config = readConfig();
+  const access = await requireTeamAccess(req, res, { write: true });
+  if (!access) return;
+  const config = readConfig(access.teamId);
   if (!config || !config[platform]) {
     return res.status(404).json({ error: 'Platform not configured' });
   }
   delete config[platform];
-  writeConfig(config);
+  if (Object.keys(config).length === 0) deleteConfig(access.teamId);
+  else writeConfig(access.teamId, config);
   return res.json({ success: true, platform });
 });
 
 // POST /api/distribution/test/:platform — test connectivity
 router.post('/test/:platform', async (req, res) => {
   const { platform } = req.params;
-  const config = readConfig();
+  const access = await requireTeamAccess(req, res, { write: true });
+  if (!access) return;
+  const config = readConfig(access.teamId);
   if (!config || !config[platform]) {
     return res.status(404).json({ error: 'Platform not configured' });
   }

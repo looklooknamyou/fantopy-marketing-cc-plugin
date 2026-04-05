@@ -38,6 +38,8 @@ npm install
 
 export SUPABASE_URL="https://your-project.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="eyJ..."
+# Optional override if you run the API outside the repo root
+# export MARKETING_OUTPUT_DIR="/absolute/path/to/marketing-output"
 
 node server.js
 # Server running on port 3847
@@ -184,7 +186,7 @@ All endpoints require `x-api-key` header (except `/api/auth/register`).
 - API keys are stored hashed-equivalent (plain UUID, transmitted via header)
 - Row Level Security (RLS) on all tables — users only see their team data
 - Storage paths scoped by team ID — cross-team access blocked by RLS
-- Supabase anon key is safe to embed in dashboard URLs (RLS enforces access)
+- Dashboard cloud secrets are loaded from a local `cloud-config.json` bootstrap file, not URL query params
 - Service role key (API server only) must be kept secret
 
 ## Troubleshooting

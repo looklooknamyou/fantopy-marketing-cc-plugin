@@ -6,6 +6,7 @@ const teamsRoutes = require('./routes/teams');
 const campaignsRoutes = require('./routes/campaigns');
 const distributionRoutes = require('./routes/distribution');
 const approvalRoutes = require('./routes/approval');
+const stagingRoutes = require('./routes/staging');
 
 const app = express();
 const PORT = process.env.PORT || 3847;
@@ -52,6 +53,7 @@ app.use('/api/teams', teamsRoutes);
 app.use('/api/campaigns', campaignsRoutes);
 app.use('/api/distribution', distributionRoutes);
 app.use('/api/approval', approvalRoutes);
+app.use('/api/staging', stagingRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'marketing-pipeline-cloud' });

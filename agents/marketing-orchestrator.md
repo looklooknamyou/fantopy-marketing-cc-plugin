@@ -25,11 +25,12 @@ A real-time web dashboard tracks pipeline progress. You MUST follow these steps:
 After creating the output directories, run these Bash commands:
 
 ```bash
-# Copy dashboard HTML to output directory
+# Copy dashboard assets to output directory
 cp ~/.claude/plugins/local/marketing-pipeline/assets/pipeline-dashboard.html ./marketing-output/{slug}/pipeline-dashboard.html
+cp ~/.claude/plugins/local/marketing-pipeline/assets/supabase.js ./marketing-output/{slug}/supabase.js
 
 # Start local HTTP server on port 8847 (background, won't block)
-cd ./marketing-output/{slug}/ && nohup python3 -m http.server 8847 > /dev/null 2>&1 &
+cd ./marketing-output/{slug}/ && nohup python3 -m http.server 8847 --bind 127.0.0.1 > /dev/null 2>&1 &
 echo $! > ./marketing-output/{slug}/.server.pid
 
 # Open dashboard in browser
@@ -101,6 +102,7 @@ After Stage 8 (Distribution) completes — or after Stage 6 if approval/distribu
 # Stop the HTTP server
 kill $(cat ./marketing-output/{slug}/.server.pid) 2>/dev/null || true
 rm -f ./marketing-output/{slug}/.server.pid
+rm -f ./marketing-output/{slug}/cloud-config.json
 ```
 
 Write final pipeline-status.json with status "done" and all stages marked "done" so the dashboard shows the completed state.
@@ -355,9 +357,24 @@ const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipel
 
 4. **Log activity**: "Awaiting content approval — review in dashboard or run /marketing approve {slug}"
 
-5. **Poll for approval** — run the polling script via Bash:
+5. **Poll for approval** — run the polling script via Bash (portable on macOS/Linux):
 ```bash
-timeout 600 node ~/.claude/plugins/local/marketing-pipeline/assets/distribution/approval-poll.js ./marketing-output/{slug}/approval-status.json
+python3 - <<'PY'
+import os
+import subprocess
+import sys
+
+script_path = os.path.expanduser('~/.claude/plugins/local/marketing-pipeline/assets/distribution/approval-poll.js')
+
+try:
+    result = subprocess.run(
+        ['node', script_path, './marketing-output/{slug}/approval-status.json'],
+        timeout=600
+    )
+    raise SystemExit(result.returncode)
+except subprocess.TimeoutExpired:
+    raise SystemExit(124)
+PY
 ```
 
 This blocks until a team member approves/rejects content (via the dashboard Staging panel or CLI).
@@ -782,28 +799,32 @@ const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipel
 })();
 ```
 
-### Dashboard URL With Cloud Params
+### Dashboard Bootstrap File
 
-When cloud is active, open the dashboard with cloud query params so it uses Supabase Realtime and shows the cloud UI (team bar, campaign browser, download links):
-
-```bash
-open "http://localhost:8847/pipeline-dashboard.html?cloud=1&campaign_id={CLOUD_CAMPAIGN_ID}&supabase_url={SUPABASE_URL}&supabase_key={SUPABASE_ANON_KEY}&team_id={TEAM_ID}&api_key={API_KEY}&api_url=http://localhost:3847"
-```
-
-Read the Supabase URL, anon key, team ID, and API key from the SDK config and env:
+When cloud is active, write a local `cloud-config.json` file into the campaign output directory so the dashboard can boot in cloud mode without putting secrets in the URL:
 
 ```javascript
+const fs = require('fs');
 const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipeline/cloud/sdk');
 (async () => {
   await cloud.init();
   const cfg = cloud.getConfig();
-  console.log(JSON.stringify({
-    url: cfg.supabase_url,
-    key: cfg.supabase_anon_key,
+  fs.writeFileSync('./marketing-output/{slug}/cloud-config.json', JSON.stringify({
+    campaign_id: '{CLOUD_CAMPAIGN_ID}',
+    supabase_url: cfg.supabase_url,
+    supabase_key: cfg.supabase_anon_key,
     team_id: cfg.active_team_id,
-    api_key: process.env.MARKETING_CLOUD_API_KEY
-  }));
+    api_key: process.env.MARKETING_CLOUD_API_KEY,
+    api_url: 'http://localhost:3847'
+  }, null, 2));
+  fs.chmodSync('./marketing-output/{slug}/cloud-config.json', 0o600);
 })();
+```
+
+Then open the dashboard with a non-secret URL:
+
+```bash
+open "http://localhost:8847/pipeline-dashboard.html?cloud=1"
 ```
 
 ### Summary of Cloud Touchpoints
@@ -814,7 +835,7 @@ const cloud = require(process.env.HOME + '/.claude/plugins/local/marketing-pipel
 | Each `pipeline-status.json` write | `cloud.syncStatus(campaignId, statusFilePath)` |
 | Each deliverable file created | `cloud.uploadDeliverable(campaignId, localPath, relativePath)` |
 | Approval gate (Stage 7) | `cloud.syncApproval(campaignId, approvalStatusPath)` |
-| Dashboard open | Append `?cloud=1&campaign_id=...&supabase_url=...&supabase_key=...` |
+| Dashboard open | Write `cloud-config.json`, then open `?cloud=1` |
 
 ---
 

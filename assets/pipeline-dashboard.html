@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>marketing-pipeline</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./supabase.js"></script>
   <style>
     :root {
       --background-primary: #1e1e1e;
@@ -1449,6 +1450,52 @@
     .monitor-empty h3 { font-size: 16px; color: var(--text-muted); margin-bottom: 8px; }
     @keyframes pulse-accent { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
+    /* ===================== SETTINGS VIEW ===================== */
+    .settings-view { padding: 20px; animation: fade-in 0.3s ease-out; }
+    .settings-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    .settings-title { font-size: 20px; font-weight: 700; color: var(--text-normal); }
+    .settings-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+    .settings-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+    .settings-stack { display: flex; flex-direction: column; gap: 16px; }
+    .settings-card {
+      background: var(--background-secondary); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-m); padding: 16px;
+    }
+    .settings-card-title { font-size: 14px; font-weight: 700; color: var(--text-normal); margin-bottom: 6px; }
+    .settings-card-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+    .settings-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .settings-col { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+    .settings-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .settings-select, .settings-input, .settings-textarea {
+      width: 100%; background: var(--background-modifier-form-field); border: 1px solid var(--background-modifier-border);
+      color: var(--text-normal); padding: 8px 10px; border-radius: var(--radius-s); font-family: var(--font-ui); font-size: 13px;
+    }
+    .settings-textarea { min-height: 96px; resize: vertical; }
+    .settings-note { font-size: 11px; color: var(--text-faint); margin-top: 8px; line-height: 1.5; }
+    .settings-code {
+      background: var(--background-modifier-form-field); border: 1px solid var(--background-modifier-border);
+      border-radius: var(--radius-s); padding: 10px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .settings-pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px;
+      background: rgba(127,109,242,0.12); color: var(--text-accent); font-size: 11px; font-weight: 600;
+    }
+    .settings-member-list { display: flex; flex-direction: column; gap: 8px; }
+    .settings-member-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px;
+      background: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+    }
+    .settings-member-name { font-size: 13px; font-weight: 600; color: var(--text-normal); }
+    .settings-member-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+    .settings-empty {
+      padding: 20px; text-align: center; color: var(--text-faint); font-size: 12px;
+      border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-s);
+    }
+    @media (max-width: 960px) {
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+
     /* ===================== ANIMATIONS ===================== */
     @keyframes fade-in {
       from { opacity: 0; }
@@ -1509,16 +1556,25 @@
       user: null,
       connected: false,
 
-      async init(apiKey, teamId, supabaseUrl, supabaseKey) {
+      async init(apiKey, teamId, supabaseUrl, supabaseKey, apiUrl) {
         this.apiKey = apiKey;
         this.teamId = teamId;
+        if (apiUrl) this.apiUrl = apiUrl;
         if (supabaseUrl && supabaseKey && window.supabase) {
           this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
         }
         try {
           const r = await fetch(this.apiUrl + '/api/auth/me', { headers: this.headers() });
           if (!r.ok) return false;
-          this.user = await r.json();
+          const payload = await r.json();
+          this.user = payload.user || payload;
+          if (!this.teamId) {
+            const teams = await this.listTeams();
+            if (teams.length > 0) {
+              this.teamId = teams[0].id;
+              updateStoredCloudBootstrap({ team_id: this.teamId });
+            }
+          }
           this.connected = true;
           return true;
         } catch (e) { this.connected = false; return false; }
@@ -1556,14 +1612,76 @@
       async getTeamMembers() {
         try { const r = await fetch(this.apiUrl + '/api/teams/' + this.teamId + '/members', { headers: this.headers() }); if (!r.ok) return []; const data = await r.json(); return data.members || data || []; } catch (e) { return []; }
       },
+      async listTeams() {
+        try { const r = await fetch(this.apiUrl + '/api/teams', { headers: this.headers() }); if (!r.ok) return []; const data = await r.json(); return data.teams || data || []; } catch (e) { return []; }
+      },
+      async createTeam(name, slug) {
+        try {
+          const body = slug ? { name, slug } : { name };
+          const r = await fetch(this.apiUrl + '/api/teams', { method: 'POST', headers: this.headers(), body: JSON.stringify(body) });
+          if (!r.ok) return null;
+          const data = await r.json();
+          return data.team || data;
+        } catch (e) { return null; }
+      },
+      async inviteTeamMember(teamId, email, role) {
+        try {
+          const r = await fetch(this.apiUrl + '/api/teams/' + teamId + '/invite', { method: 'POST', headers: this.headers(), body: JSON.stringify({ email, role }) });
+          if (!r.ok) return null;
+          return r.json();
+        } catch (e) { return null; }
+      },
+      async removeTeamMember(teamId, userId) {
+        try { return fetch(this.apiUrl + '/api/teams/' + teamId + '/members/' + userId, { method: 'DELETE', headers: this.headers() }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async rotateApiKey() {
+        try {
+          const r = await fetch(this.apiUrl + '/api/auth/rotate-key', { method: 'POST', headers: this.headers() });
+          if (!r.ok) return null;
+          return r.json();
+        } catch (e) { return null; }
+      },
       async getDistConfig() {
-        try { const r = await fetch(this.apiUrl + '/api/distribution/config/raw', { headers: this.headers() }); if (!r.ok) return {}; return r.json(); } catch (e) { return {}; }
+        try {
+          const rawUrl = this.apiUrl + '/api/distribution/config/raw?team_id=' + encodeURIComponent(this.teamId);
+          const rawResponse = await fetch(rawUrl, { headers: this.headers() });
+          if (rawResponse.ok) return rawResponse.json();
+
+          const maskedUrl = this.apiUrl + '/api/distribution/config?team_id=' + encodeURIComponent(this.teamId);
+          const maskedResponse = await fetch(maskedUrl, { headers: this.headers() });
+          if (!maskedResponse.ok) return {};
+          return maskedResponse.json();
+        } catch (e) { return {}; }
       },
       async saveDistConfig(platform, config) {
-        try { return fetch(this.apiUrl + '/api/distribution/config/' + platform, { method: 'PUT', headers: this.headers(), body: JSON.stringify(config) }).then(r => r.ok); } catch (e) { return false; }
+        try { return fetch(this.apiUrl + '/api/distribution/config/' + platform, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ ...config, team_id: this.teamId }) }).then(r => r.ok); } catch (e) { return false; }
       },
       async testDistPlatform(platform) {
-        try { const r = await fetch(this.apiUrl + '/api/distribution/test/' + platform, { method: 'POST', headers: this.headers() }); if (!r.ok) return { success: false, message: 'Server error' }; return r.json(); } catch (e) { return { success: false, message: 'Connection failed' }; }
+        try { const r = await fetch(this.apiUrl + '/api/distribution/test/' + platform, { method: 'POST', headers: this.headers(), body: JSON.stringify({ team_id: this.teamId }) }); if (!r.ok) return { success: false, message: 'Server error' }; return r.json(); } catch (e) { return { success: false, message: 'Connection failed' }; }
+      },
+      async deleteDistConfig(platform) {
+        try { return fetch(this.apiUrl + '/api/distribution/config/' + platform, { method: 'DELETE', headers: this.headers(), body: JSON.stringify({ team_id: this.teamId }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async getStagingConfig() {
+        try {
+          const rawUrl = this.apiUrl + '/api/staging/config/raw?team_id=' + encodeURIComponent(this.teamId);
+          const rawResponse = await fetch(rawUrl, { headers: this.headers() });
+          if (rawResponse.ok) return rawResponse.json();
+
+          const maskedUrl = this.apiUrl + '/api/staging/config?team_id=' + encodeURIComponent(this.teamId);
+          const maskedResponse = await fetch(maskedUrl, { headers: this.headers() });
+          if (!maskedResponse.ok) return {};
+          return maskedResponse.json();
+        } catch (e) { return {}; }
+      },
+      async saveStagingConfig(service, config) {
+        try { return fetch(this.apiUrl + '/api/staging/config/' + service, { method: 'PUT', headers: this.headers(), body: JSON.stringify({ ...config, team_id: this.teamId }) }).then(r => r.ok); } catch (e) { return false; }
+      },
+      async testStagingService(service) {
+        try { const r = await fetch(this.apiUrl + '/api/staging/test/' + service, { method: 'POST', headers: this.headers(), body: JSON.stringify({ team_id: this.teamId }) }); if (!r.ok) return { success: false, message: 'Server error' }; return r.json(); } catch (e) { return { success: false, message: 'Connection failed' }; }
+      },
+      async deleteStagingConfig(service) {
+        try { return fetch(this.apiUrl + '/api/staging/config/' + service, { method: 'DELETE', headers: this.headers(), body: JSON.stringify({ team_id: this.teamId }) }).then(r => r.ok); } catch (e) { return false; }
       },
 
       subscribeToUpdates(campaignId, callback) {
@@ -1575,6 +1693,7 @@
     };
 
     window.isCloudMode = false;
+    let socialCanEdit = true;
 
     // ===================== STATE =====================
     let currentView = null;
@@ -1592,18 +1711,23 @@
     };
 
     // ===================== URL HELPERS =====================
+    const CLOUD_BOOTSTRAP_STORAGE_KEY = 'marketing-pipeline-cloud-config';
+
     function getUrlParams() {
       const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const getParam = (key) => params.get(key) || hashParams.get(key);
       return {
-        view: params.get('view'),
-        sustain: params.get('sustain'),
-        campaign_dir: params.get('campaign_dir'),
-        cloud: params.get('cloud'),
-        campaign_id: params.get('campaign_id'),
-        supabase_url: params.get('supabase_url'),
-        supabase_key: params.get('supabase_key'),
-        api_key: params.get('api_key'),
-        team_id: params.get('team_id')
+        view: getParam('view'),
+        sustain: getParam('sustain'),
+        campaign_dir: getParam('campaign_dir'),
+        cloud: getParam('cloud'),
+        campaign_id: getParam('campaign_id'),
+        supabase_url: getParam('supabase_url'),
+        supabase_key: getParam('supabase_key'),
+        api_key: getParam('api_key'),
+        team_id: getParam('team_id'),
+        api_url: getParam('api_url')
       };
     }
 
@@ -1615,6 +1739,67 @@
         url.searchParams.set(key, value);
       }
       history.replaceState({}, '', url);
+    }
+
+    function scrubCloudParams() {
+      const url = new URL(window.location);
+      ['campaign_id', 'supabase_url', 'supabase_key', 'api_key', 'team_id', 'api_url'].forEach(key => {
+        url.searchParams.delete(key);
+      });
+      url.hash = '';
+      history.replaceState({}, '', url);
+    }
+
+    function loadStoredCloudBootstrap() {
+      try {
+        const raw = sessionStorage.getItem(CLOUD_BOOTSTRAP_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function storeCloudBootstrap(config) {
+      try {
+        sessionStorage.setItem(CLOUD_BOOTSTRAP_STORAGE_KEY, JSON.stringify(config));
+      } catch (e) {}
+    }
+
+    function updateStoredCloudBootstrap(patch) {
+      const next = { ...loadStoredCloudBootstrap(), ...patch };
+      storeCloudBootstrap(next);
+      return next;
+    }
+
+    async function loadCloudBootstrap(params) {
+      let bootstrap = loadStoredCloudBootstrap();
+
+      if (params.api_key || params.supabase_url || params.supabase_key || params.team_id || params.api_url || params.campaign_id) {
+        bootstrap = {
+          ...bootstrap,
+          campaign_id: params.campaign_id || bootstrap.campaign_id,
+          team_id: params.team_id || bootstrap.team_id,
+          supabase_url: params.supabase_url || bootstrap.supabase_url,
+          supabase_key: params.supabase_key || bootstrap.supabase_key,
+          api_key: params.api_key || bootstrap.api_key,
+          api_url: params.api_url || bootstrap.api_url
+        };
+        storeCloudBootstrap(bootstrap);
+        scrubCloudParams();
+      }
+
+      if (params.cloud === '1') {
+        try {
+          const response = await fetch('cloud-config.json?t=' + Date.now(), { cache: 'no-store' });
+          if (response.ok) {
+            const fileConfig = await response.json();
+            bootstrap = { ...bootstrap, ...fileConfig };
+            storeCloudBootstrap(bootstrap);
+          }
+        } catch (e) {}
+      }
+
+      return bootstrap;
     }
 
     // ===================== SIDEBAR =====================
@@ -1653,6 +1838,9 @@
           </button>
           <button class="sidebar-nav-item" data-nav="history" onclick="switchView('history', '${currentCampaign || ''}')">
             <span class="sidebar-nav-icon">\u2261</span> History
+          </button>
+          <button class="sidebar-nav-item" data-nav="settings" onclick="switchView('settings')">
+            <span class="sidebar-nav-icon">\u2692</span> Settings
           </button>
         </div>
         <div class="sidebar-section" id="sidebar-campaigns-section">
@@ -1730,17 +1918,17 @@
     // ===================== VIEW ROUTER =====================
     async function initViewRouter() {
       const params = getUrlParams();
-      const urlApiKey = params.api_key;
-      const urlTeamId = params.team_id;
+      const cloudBootstrap = await loadCloudBootstrap(params);
 
-      // Cloud mode: auto-detect from URL params
-      if (params.cloud === '1' || urlApiKey) {
-        const apiKey = urlApiKey || '';
-        const teamId = urlTeamId || '788e7e68-d210-4caf-874c-84ea7ab22560';
-        const supabaseUrl = params.supabase_url || 'http://localhost:8000';
-        const supabaseKey = params.supabase_key || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE';
+      // Cloud mode: bootstrap from local file or legacy session state.
+      if (params.cloud === '1' || params.api_key || params.supabase_url || params.supabase_key || params.team_id || params.api_url) {
+        const apiKey = cloudBootstrap.api_key || '';
+        const teamId = cloudBootstrap.team_id || '';
+        const supabaseUrl = cloudBootstrap.supabase_url || '';
+        const supabaseKey = cloudBootstrap.supabase_key || '';
+        const apiUrl = cloudBootstrap.api_url || 'http://localhost:3847';
         if (apiKey) {
-          const ok = await cloudAPI.init(apiKey, teamId, supabaseUrl, supabaseKey);
+          const ok = await cloudAPI.init(apiKey, teamId, supabaseUrl, supabaseKey, apiUrl);
           if (ok) {
             window.isCloudMode = true;
             updateCloudStatus(true);
@@ -1793,6 +1981,9 @@
           case 'social':
             renderSocialView();
             break;
+          case 'settings':
+            renderSettingsView();
+            break;
           default: renderOneShotView();
         }
       } else {
@@ -1833,6 +2024,7 @@
           case 'review': renderReviewView(); break;
           case 'staging': renderStagingView(); break;
           case 'social': renderSocialView(); break;
+          case 'settings': renderSettingsView(); break;
         }
       }
     }
@@ -2474,41 +2666,66 @@
     function openBatchDetail(index) {
       const entry = (calEntries || [])[index];
       if (!entry) return;
-      document.getElementById('detail-title').textContent = `Batch ${(entry.batch_number || index + 1).toString().padStart(3, '0')}: ${entry.theme || 'No theme'}`;
-      document.getElementById('detail-content').innerHTML = `
-        <div class="batch-detail-section">
-          <div class="batch-detail-section-title">Batch Information</div>
-          <div class="batch-detail-grid">
-            <div class="batch-detail-item"><div class="batch-detail-label">Scheduled Date</div><div class="batch-detail-value">${entry.scheduled_date || 'Not set'}</div></div>
-            <div class="batch-detail-item"><div class="batch-detail-label">Status</div><div class="batch-detail-value">${entry.status || 'Pending'}</div></div>
-            <div class="batch-detail-item"><div class="batch-detail-label">Funnel Stage</div><div class="batch-detail-value">${entry.funnel_stage || 'Unknown'}</div></div>
-            <div class="batch-detail-item"><div class="batch-detail-label">Content Pillar</div><div class="batch-detail-value">${entry.content_pillar || 'General'}</div></div>
+      const batchNumber = entry.batch || entry.batch_number || index + 1;
+      const isHistoryEntry = !!(entry.started_at || entry.completed_at || entry.run_at || entry.timestamp);
+      document.getElementById('detail-title').textContent = `Batch ${String(batchNumber).padStart(3, '0')}: ${entry.theme || 'No theme'}`;
+      if (isHistoryEntry) {
+        document.getElementById('detail-content').innerHTML = `
+          <div class="batch-detail-section">
+            <div class="batch-detail-section-title">Execution Summary</div>
+            <div class="batch-detail-grid">
+              <div class="batch-detail-item"><div class="batch-detail-label">Started</div><div class="batch-detail-value">${entry.started_at || entry.run_at || entry.timestamp || '-'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Completed</div><div class="batch-detail-value">${entry.completed_at || '-'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Status</div><div class="batch-detail-value">${entry.status || 'pending'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Duration</div><div class="batch-detail-value">${entry.duration_sec ? formatDuration(entry.duration_sec) : '-'}</div></div>
+            </div>
           </div>
-        </div>
-        <div class="batch-detail-section">
-          <div class="batch-detail-section-title">Content Types</div>
-          ${(entry.content_types || []).map(ct => `
-            <div class="batch-detail-content-card">
-              <div class="batch-detail-content-type">${ct.type || 'Content'}</div>
-              ${ct.angle ? `<div class="batch-detail-content-detail"><strong>Angle:</strong> ${escapeHtml(ct.angle)}</div>` : ''}
-              ${ct.keywords ? `<div class="batch-detail-content-detail"><strong>Keywords:</strong> ${escapeHtml(ct.keywords)}</div>` : ''}
-              ${ct.hook ? `<div class="batch-detail-content-detail"><strong>Hook:</strong> ${escapeHtml(ct.hook)}</div>` : ''}
-              ${ct.subject_line ? `<div class="batch-detail-content-detail"><strong>Subject:</strong> ${escapeHtml(ct.subject_line)}</div>` : ''}
-              ${ct.cta ? `<div class="batch-detail-content-detail"><strong>CTA:</strong> ${escapeHtml(ct.cta)}</div>` : ''}
-              ${ct.platforms ? `<div class="batch-detail-content-detail"><strong>Platforms:</strong> ${escapeHtml(ct.platforms)}</div>` : ''}
+          <div class="batch-detail-section">
+            <div class="batch-detail-section-title">Deliverables</div>
+            ${((entry.deliverables || []).length > 0 ? (entry.deliverables || []).map(d => `
+              <div class="batch-detail-item" style="margin-bottom:8px;">
+                <div class="batch-detail-label">File</div>
+                <div class="batch-detail-value">${escapeHtml(typeof d === 'string' ? d : (d.path || d.description || ''))}</div>
+              </div>
+            `).join('') : '<div class="batch-detail-value">No deliverables recorded for this batch.</div>')}
+          </div>
+        `;
+      } else {
+        document.getElementById('detail-content').innerHTML = `
+          <div class="batch-detail-section">
+            <div class="batch-detail-section-title">Batch Information</div>
+            <div class="batch-detail-grid">
+              <div class="batch-detail-item"><div class="batch-detail-label">Scheduled Date</div><div class="batch-detail-value">${entry.scheduled_date || 'Not set'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Status</div><div class="batch-detail-value">${entry.status || 'Pending'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Funnel Stage</div><div class="batch-detail-value">${entry.funnel_stage || 'Unknown'}</div></div>
+              <div class="batch-detail-item"><div class="batch-detail-label">Content Pillar</div><div class="batch-detail-value">${entry.pillar || entry.content_pillar || 'General'}</div></div>
             </div>
-          `).join('')}
-        </div>
-        <div class="batch-detail-section">
-          <div class="batch-detail-section-title">Deliverables</div>
-          ${(entry.deliverables || []).map(d => `
-            <div class="batch-detail-item" style="margin-bottom:8px;">
-              <div class="batch-detail-label">${d.type || 'File'}</div>
-              <div class="batch-detail-value">${escapeHtml(d.path || d.description || '')}</div>
-            </div>
-          `).join('')}
-        </div>
-      `;
+          </div>
+          <div class="batch-detail-section">
+            <div class="batch-detail-section-title">Content Types</div>
+            ${(entry.content_types || []).map(ct => `
+              <div class="batch-detail-content-card">
+                <div class="batch-detail-content-type">${ct.type || 'Content'}</div>
+                ${ct.angle ? `<div class="batch-detail-content-detail"><strong>Angle:</strong> ${escapeHtml(ct.angle)}</div>` : ''}
+                ${(ct.target_keywords || ct.keywords) ? `<div class="batch-detail-content-detail"><strong>Keywords:</strong> ${escapeHtml((ct.target_keywords || ct.keywords).join ? (ct.target_keywords || ct.keywords).join(', ') : (ct.target_keywords || ct.keywords))}</div>` : ''}
+                ${ct.hook ? `<div class="batch-detail-content-detail"><strong>Hook:</strong> ${escapeHtml(ct.hook)}</div>` : ''}
+                ${ct.subject_line ? `<div class="batch-detail-content-detail"><strong>Subject:</strong> ${escapeHtml(ct.subject_line)}</div>` : ''}
+                ${ct.cta ? `<div class="batch-detail-content-detail"><strong>CTA:</strong> ${escapeHtml(ct.cta)}</div>` : ''}
+                ${ct.platforms ? `<div class="batch-detail-content-detail"><strong>Platforms:</strong> ${escapeHtml(Array.isArray(ct.platforms) ? ct.platforms.join(', ') : ct.platforms)}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          <div class="batch-detail-section">
+            <div class="batch-detail-section-title">Deliverables</div>
+            ${(entry.deliverables || []).map(d => `
+              <div class="batch-detail-item" style="margin-bottom:8px;">
+                <div class="batch-detail-label">${d.type || 'File'}</div>
+                <div class="batch-detail-value">${escapeHtml(d.path || d.description || '')}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
       document.getElementById('batch-detail-panel').classList.add('open');
       document.getElementById('batch-detail-overlay').classList.add('open');
     }
@@ -2606,11 +2823,15 @@
 
     async function loadHistory() {
       try {
+        if (window.isCloudMode) {
+          throw new Error('Batch history is only available for local sustained campaigns.');
+        }
         const response = await fetch((currentCampaign || '.') + '/batch-history.json?t=' + Date.now());
         if (!response.ok) throw new Error('History not found');
         const history = await response.json();
-        calEntries = history;
-        renderHistoryRows(history);
+        const entries = Array.isArray(history) ? history : (history.batches || []);
+        calEntries = entries;
+        renderHistoryRows(entries);
       } catch (err) {
         document.getElementById('history-rows').innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-faint)">No history found. Run batches to see execution history.</td></tr>`;
       }
@@ -2619,8 +2840,8 @@
     function renderHistoryRows(history) {
       document.getElementById('history-rows').innerHTML = history.map((entry, i) => `
         <tr onclick="openBatchDetail(${i})">
-          <td>Batch ${(entry.batch_number || i + 1).toString().padStart(3, '0')}</td>
-          <td>${entry.run_at || entry.timestamp || '-'}</td>
+          <td>Batch ${(entry.batch || entry.batch_number || i + 1).toString().padStart(3, '0')}</td>
+          <td>${entry.started_at || entry.run_at || entry.timestamp || '-'}</td>
           <td>${entry.duration_sec ? formatDuration(entry.duration_sec) : '-'}</td>
           <td><span class="history-status ${entry.status || 'pending'}">${entry.status || 'Pending'}</span></td>
         </tr>
@@ -2821,9 +3042,313 @@
     }
 
     // ===================== CLOUD VIEW =====================
+    let settingsTeams = [];
+    let settingsMembers = [];
+    let settingsInviteResult = null;
+
+    function getActiveTeamMeta() {
+      return settingsTeams.find(team => team.id === cloudAPI.teamId) || null;
+    }
+
+    function getCurrentApiKey() {
+      return cloudAPI.apiKey || loadStoredCloudBootstrap().api_key || '';
+    }
+
+    function getCloudConfigPreview() {
+      const bootstrap = loadStoredCloudBootstrap();
+      return JSON.stringify({
+        campaign_id: bootstrap.campaign_id || '',
+        supabase_url: bootstrap.supabase_url || '',
+        supabase_key: bootstrap.supabase_key || '',
+        team_id: cloudAPI.teamId || bootstrap.team_id || '',
+        api_key: getCurrentApiKey(),
+        api_url: cloudAPI.apiUrl || bootstrap.api_url || 'http://localhost:3847'
+      }, null, 2);
+    }
+
+    async function renderSettingsView() {
+      const dashboard = document.getElementById('dashboard');
+      currentView = 'settings';
+
+      if (!window.isCloudMode) {
+        dashboard.innerHTML = `<div class="settings-view">
+          <div class="settings-header">
+            <div>
+              <div class="settings-title">Settings</div>
+              <div class="settings-subtitle">Cloud-only account and team management.</div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-card-title">Cloud not connected</div>
+            <div class="settings-card-subtitle">Team management and API key controls are only available when the dashboard is running in cloud mode.</div>
+            <div class="settings-note">Open the dashboard from a cloud-backed campaign, or bootstrap it with cloud-config.json.</div>
+          </div>
+        </div>`;
+        setActiveTab('settings');
+        document.getElementById('status-refresh').textContent = 'Local mode';
+        document.getElementById('status-dot').style.display = 'none';
+        return;
+      }
+
+      dashboard.innerHTML = `<div class="settings-view">
+        <div class="settings-header">
+          <div>
+            <div class="settings-title">Settings</div>
+            <div class="settings-subtitle">Manage active team context, members, invitations, and dashboard API access.</div>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <div class="settings-stack">
+            <div class="settings-card">
+              <div class="settings-card-title">Team Management</div>
+              <div class="settings-card-subtitle">Choose the active team for this dashboard session and manage who can access shared campaigns.</div>
+              <div id="settings-team-body" class="settings-empty">Loading teams...</div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-card-title">Members</div>
+              <div class="settings-card-subtitle">Current members of the active team.</div>
+              <div id="settings-members-body" class="settings-empty">Loading members...</div>
+            </div>
+          </div>
+          <div class="settings-stack">
+            <div class="settings-card">
+              <div class="settings-card-title">API Access</div>
+              <div class="settings-card-subtitle">Current dashboard credential plus rotation controls.</div>
+              <div id="settings-api-body" class="settings-empty">Loading API access...</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+      setActiveTab('settings');
+      settingsInviteResult = null;
+
+      settingsTeams = await cloudAPI.listTeams();
+      if (!cloudAPI.teamId && settingsTeams.length > 0) {
+        cloudAPI.teamId = settingsTeams[0].id;
+        updateStoredCloudBootstrap({ team_id: cloudAPI.teamId });
+      }
+      if (cloudAPI.teamId) {
+        settingsMembers = await cloudAPI.getTeamMembers();
+      } else {
+        settingsMembers = [];
+      }
+
+      renderSettingsTeamSection();
+      renderSettingsMembersSection();
+      renderSettingsApiSection();
+      updateCloudStatus(true);
+      document.getElementById('status-refresh').textContent = cloudAPI.teamId ? `Cloud: ${cloudAPI.user ? cloudAPI.user.email : 'Connected'} · Team ${cloudAPI.teamId.slice(0, 8)}` : `Cloud: ${cloudAPI.user ? cloudAPI.user.email : 'Connected'}`;
+      document.getElementById('status-dot').style.display = '';
+    }
+
+    function renderSettingsTeamSection() {
+      const body = document.getElementById('settings-team-body');
+      if (!body) return;
+
+      if (settingsTeams.length === 0) {
+        body.innerHTML = `<div class="settings-empty">No teams found for this account yet.</div>
+          <div class="settings-note">Create a team below to enable shared campaign access.</div>
+          ${renderSettingsCreateTeam(true)}`;
+        return;
+      }
+
+      const activeTeam = getActiveTeamMeta();
+      const canManageTeam = activeTeam && ['owner', 'admin'].includes(activeTeam.role);
+
+      body.innerHTML = `
+        <div class="settings-row" style="margin-bottom:14px">
+          <div class="settings-col">
+            <div class="settings-label">Active Team</div>
+            <select class="settings-select" id="settings-team-select" onchange="switchSettingsTeam(this.value)">
+              ${settingsTeams.map(team => `<option value="${team.id}" ${team.id === cloudAPI.teamId ? 'selected' : ''}>${escapeHtml(team.name)} · ${team.role}</option>`).join('')}
+            </select>
+          </div>
+          ${activeTeam ? `<div class="settings-pill">${escapeHtml(activeTeam.role)}</div>` : ''}
+        </div>
+        <div class="settings-note">This switch updates the active team for the current dashboard session. Use the command below if you also want the CLI cloud config to follow the same team.</div>
+        ${cloudAPI.teamId ? `<div class="settings-code">/marketing teams switch ${cloudAPI.teamId}</div>` : ''}
+        <div style="margin-top:16px">${renderSettingsCreateTeam(false)}</div>
+        <div style="margin-top:16px">
+          <div class="settings-card-title" style="margin-bottom:4px">Invite Member</div>
+          <div class="settings-card-subtitle" style="margin-bottom:10px">${canManageTeam ? 'Send an invitation token for the active team.' : 'Only owners and admins can invite members.'}</div>
+          <div class="settings-row">
+            <div class="settings-col">
+              <div class="settings-label">Email</div>
+              <input class="settings-input" id="settings-invite-email" placeholder="colleague@example.com" ${canManageTeam ? '' : 'disabled'}>
+            </div>
+            <div class="settings-col" style="max-width:180px">
+              <div class="settings-label">Role</div>
+              <select class="settings-select" id="settings-invite-role" ${canManageTeam ? '' : 'disabled'}>
+                <option value="member">member</option>
+                <option value="viewer">viewer</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-row" style="margin-top:10px">
+            <button class="staging-btn primary" onclick="inviteSettingsMember()" ${canManageTeam ? '' : 'disabled'}>Send Invite</button>
+          </div>
+          ${settingsInviteResult ? `<div class="settings-note" style="margin-top:10px">${escapeHtml(settingsInviteResult.message || '')}</div>${settingsInviteResult.command ? `<div class="settings-code">${escapeHtml(settingsInviteResult.command)}</div>` : ''}` : ''}
+        </div>
+      `;
+    }
+
+    function renderSettingsCreateTeam(emptyState) {
+      return `
+        <div>
+          <div class="settings-card-title" style="margin-bottom:4px">${emptyState ? 'Create First Team' : 'Create Team'}</div>
+          <div class="settings-card-subtitle" style="margin-bottom:10px">New teams are created under your account and become immediately selectable in this dashboard.</div>
+          <div class="settings-row">
+            <div class="settings-col">
+              <div class="settings-label">Team Name</div>
+              <input class="settings-input" id="settings-team-name" placeholder="My Agency">
+            </div>
+            <div class="settings-col">
+              <div class="settings-label">Slug (optional)</div>
+              <input class="settings-input" id="settings-team-slug" placeholder="my-agency">
+            </div>
+          </div>
+          <div class="settings-row" style="margin-top:10px">
+            <button class="staging-btn primary" onclick="createSettingsTeam()">Create Team</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettingsMembersSection() {
+      const body = document.getElementById('settings-members-body');
+      if (!body) return;
+      const activeTeam = getActiveTeamMeta();
+      const canManageTeam = activeTeam && ['owner', 'admin'].includes(activeTeam.role);
+
+      if (!cloudAPI.teamId) {
+        body.innerHTML = '<div class="settings-empty">Select or create a team first.</div>';
+        return;
+      }
+      if (settingsMembers.length === 0) {
+        body.innerHTML = '<div class="settings-empty">No members loaded for this team.</div>';
+        return;
+      }
+
+      body.innerHTML = `<div class="settings-member-list">
+        ${settingsMembers.map(member => {
+          const canRemove = canManageTeam && member.id !== (cloudAPI.user && cloudAPI.user.id) && member.role !== 'owner';
+          return `<div class="settings-member-item">
+            <div>
+              <div class="settings-member-name">${escapeHtml(member.display_name || member.email || member.id)}</div>
+              <div class="settings-member-meta">${escapeHtml(member.email || '')}${member.joined_at ? ' · joined ' + escapeHtml(String(member.joined_at).split('T')[0]) : ''}</div>
+            </div>
+            <div class="settings-row" style="justify-content:flex-end">
+              <span class="settings-pill">${escapeHtml(member.role || 'member')}</span>
+              ${canRemove ? `<button class="staging-btn danger" onclick="removeSettingsMember('${member.id}')">Remove</button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    function renderSettingsApiSection() {
+      const body = document.getElementById('settings-api-body');
+      if (!body) return;
+      const apiKey = getCurrentApiKey();
+      body.innerHTML = `
+        <div class="settings-col" style="margin-bottom:14px">
+          <div class="settings-label">Account</div>
+          <div class="settings-code">${escapeHtml((cloudAPI.user && (cloudAPI.user.display_name || cloudAPI.user.email)) || 'Unknown user')}</div>
+        </div>
+        <div class="settings-col" style="margin-bottom:14px">
+          <div class="settings-label">Current API Key</div>
+          <textarea class="settings-textarea" id="settings-api-key" readonly>${escapeHtml(apiKey)}</textarea>
+          <div class="settings-row">
+            <button class="staging-btn secondary" onclick="copyToClipboard(document.getElementById('settings-api-key').value)">Copy API Key</button>
+            <button class="staging-btn primary" onclick="rotateSettingsApiKey()">Rotate Key</button>
+          </div>
+          <div class="settings-note">Rotation invalidates the previous key immediately for future API calls.</div>
+        </div>
+        <div class="settings-col" style="margin-bottom:14px">
+          <div class="settings-label">Shell Export</div>
+          <div class="settings-code">export MARKETING_CLOUD_API_KEY="${escapeHtml(apiKey)}"</div>
+        </div>
+        <div class="settings-col">
+          <div class="settings-label">cloud-config.json Preview</div>
+          <div class="settings-code">${escapeHtml(getCloudConfigPreview())}</div>
+        </div>
+      `;
+    }
+
+    async function switchSettingsTeam(teamId) {
+      if (!teamId) return;
+      cloudAPI.teamId = teamId;
+      currentCampaign = null;
+      updateStoredCloudBootstrap({ team_id: teamId });
+      settingsMembers = await cloudAPI.getTeamMembers();
+      renderSettingsTeamSection();
+      renderSettingsMembersSection();
+      renderSettingsApiSection();
+      updateCloudStatus(true);
+    }
+
+    async function createSettingsTeam() {
+      const nameEl = document.getElementById('settings-team-name');
+      const slugEl = document.getElementById('settings-team-slug');
+      const name = nameEl ? nameEl.value.trim() : '';
+      const slug = slugEl ? slugEl.value.trim() : '';
+      if (!name) { alert('Team name is required.'); return; }
+      const team = await cloudAPI.createTeam(name, slug);
+      if (!team) { alert('Failed to create team.'); return; }
+      settingsTeams = await cloudAPI.listTeams();
+      cloudAPI.teamId = team.id;
+      updateStoredCloudBootstrap({ team_id: team.id });
+      settingsMembers = await cloudAPI.getTeamMembers();
+      if (nameEl) nameEl.value = '';
+      if (slugEl) slugEl.value = '';
+      renderSettingsTeamSection();
+      renderSettingsMembersSection();
+      renderSettingsApiSection();
+      updateCloudStatus(true);
+    }
+
+    async function inviteSettingsMember() {
+      const activeTeam = getActiveTeamMeta();
+      if (!activeTeam || !cloudAPI.teamId) return;
+      const emailEl = document.getElementById('settings-invite-email');
+      const roleEl = document.getElementById('settings-invite-role');
+      const email = emailEl ? emailEl.value.trim() : '';
+      const role = roleEl ? roleEl.value : 'member';
+      if (!email) { alert('Invite email is required.'); return; }
+      const invite = await cloudAPI.inviteTeamMember(cloudAPI.teamId, email, role);
+      if (!invite || !invite.invitation) { alert('Failed to create invitation.'); return; }
+      settingsInviteResult = {
+        message: `Invite created for ${email}. Share the join command or token below.`,
+        command: invite.join_command || `/marketing teams join ${invite.invitation.token}`
+      };
+      if (emailEl) emailEl.value = '';
+      renderSettingsTeamSection();
+    }
+
+    async function removeSettingsMember(userId) {
+      if (!cloudAPI.teamId) return;
+      if (!confirm('Remove this member from the active team?')) return;
+      const ok = await cloudAPI.removeTeamMember(cloudAPI.teamId, userId);
+      if (!ok) { alert('Failed to remove member.'); return; }
+      settingsMembers = await cloudAPI.getTeamMembers();
+      renderSettingsMembersSection();
+    }
+
+    async function rotateSettingsApiKey() {
+      if (!confirm('Rotate the current API key? Existing automations using the old key will stop working.')) return;
+      const result = await cloudAPI.rotateApiKey();
+      if (!result || !result.api_key) { alert('Failed to rotate API key.'); return; }
+      cloudAPI.apiKey = result.api_key;
+      updateStoredCloudBootstrap({ api_key: result.api_key, team_id: cloudAPI.teamId });
+      renderSettingsApiSection();
+      updateCloudStatus(true);
+    }
 
     // ===================== SOCIAL INTEGRATIONS VIEW =====================
     let socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {} };
+    let socialAccess = { can_edit: true, role: null };
 
     async function renderSocialView() {
       const dashboard = document.getElementById('dashboard');
@@ -2832,10 +3357,14 @@
       try {
         if (window.isCloudMode) {
           const c = await cloudAPI.getDistConfig();
-          socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {}, ...c };
+          socialAccess = { can_edit: c.can_edit !== false, role: c.role || null };
+          socialCanEdit = socialAccess.can_edit;
+          socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {}, ...(c.platforms || {}) };
         } else {
           const r = await fetch('staging-config.json?t=' + Date.now());
           if (r.ok) { const c = await r.json(); socialConfig = { reddit: {}, twitter: {}, telegram: {}, discord: {}, drive: {}, ...c }; }
+          socialAccess = { can_edit: true, role: null };
+          socialCanEdit = true;
         }
       } catch (e) {}
 
@@ -2865,6 +3394,7 @@
       dashboard.innerHTML = `<div class="social-view">
         <div class="social-title">Social Integrations</div>
         <div class="social-subtitle">Connect your social media platforms for automated content distribution after campaign approval.</div>
+        ${window.isCloudMode && !socialCanEdit ? '<div class="storage-empty" style="margin-bottom:16px"><h3>Read-only access</h3><p>Your team role can view connection status but cannot change distribution credentials.</p></div>' : ''}
         <div class="social-grid">
           ${platforms.map(p => {
             const cfg = socialConfig[p.key] || {};
@@ -2885,12 +3415,12 @@
               </div>
               ${p.fields.map(f => `<div class="staging-connector-field">
                 <div class="staging-field-label">${f.label}</div>
-                <input class="staging-field-input" id="social-${p.key}-${f.id}" type="${f.type || 'text'}" placeholder="${f.hint || ''}" value="${escapeHtml(cfg[f.id] || '')}">
+                <input class="staging-field-input" id="social-${p.key}-${f.id}" type="${f.type || 'text'}" placeholder="${f.hint || ''}" value="${escapeHtml(cfg[f.id] || '')}" ${window.isCloudMode && !socialCanEdit ? 'disabled' : ''}>
               </div>`).join('')}
               <div class="staging-connector-actions" style="margin-top:12px">
-                <button class="staging-btn primary" onclick="saveSocialPlatform('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})">Save</button>
-                <button class="staging-btn secondary" onclick="testSocialPlatform('${p.key}')">Test</button>
-                ${connected ? `<button class="staging-btn danger" onclick="disconnectSocial('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})">Disconnect</button>` : ''}
+                <button class="staging-btn primary" onclick="saveSocialPlatform('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})" ${window.isCloudMode && !socialCanEdit ? 'disabled' : ''}>Save</button>
+                <button class="staging-btn secondary" onclick="testSocialPlatform('${p.key}')" ${window.isCloudMode && !socialCanEdit ? 'disabled' : ''}>Test</button>
+                ${connected ? `<button class="staging-btn danger" onclick="disconnectSocial('${p.key}', ${JSON.stringify(p.fields.map(f => f.id))})" ${window.isCloudMode && !socialCanEdit ? 'disabled' : ''}>Disconnect</button>` : ''}
               </div>
             </div>`;
           }).join('')}
@@ -2900,6 +3430,7 @@
     }
 
     async function saveSocialPlatform(key, fieldIds) {
+      if (window.isCloudMode && !socialCanEdit) { alert('Only owners and admins can change distribution credentials.'); return; }
       const cfg = {};
       fieldIds.forEach(f => { cfg[f] = document.getElementById('social-' + key + '-' + f).value.trim(); });
       socialConfig[key] = cfg;
@@ -2913,6 +3444,7 @@
     }
 
     async function testSocialPlatform(key) {
+      if (window.isCloudMode && !socialCanEdit) { alert('Only owners and admins can test distribution credentials.'); return; }
       if (window.isCloudMode) {
         const result = await cloudAPI.testDistPlatform(key);
         alert(result.success ? 'Connection successful: ' + result.message : 'Failed: ' + result.message);
@@ -2921,15 +3453,17 @@
       }
     }
 
-    function disconnectSocial(key, fieldIds) {
+    async function disconnectSocial(key, fieldIds) {
+      if (window.isCloudMode && !socialCanEdit) { alert('Only owners and admins can remove distribution credentials.'); return; }
       if (!confirm('Disconnect ' + key + '?')) return;
       socialConfig[key] = {};
-      if (window.isCloudMode) cloudAPI.saveDistConfig(key, {});
+      if (window.isCloudMode) await cloudAPI.deleteDistConfig(key);
       renderSocialView();
     }
 
     // ===================== STAGING AREA VIEW =====================
     let stagingConfig = { drive: {}, telegram: {} };
+    let stagingAccess = { can_edit: true, role: null };
     let stagingCampaigns = [];
     let stagingItems = []; // individual pieces for approval
     let stagingTab = 'pending';
@@ -2941,8 +3475,15 @@
 
       // Load saved config
       try {
-        const r = await fetch('staging-config.json?t=' + Date.now());
-        if (r.ok) stagingConfig = await r.json();
+        if (window.isCloudMode) {
+          const c = await cloudAPI.getStagingConfig();
+          stagingAccess = { can_edit: c.can_edit !== false, role: c.role || null };
+          stagingConfig = { drive: {}, telegram: {}, ...(c.integrations || {}) };
+        } else {
+          const r = await fetch('staging-config.json?t=' + Date.now());
+          if (r.ok) stagingConfig = await r.json();
+          stagingAccess = { can_edit: true, role: null };
+        }
       } catch (e) {}
 
       // Load campaigns from storage index for review queue
@@ -2961,12 +3502,13 @@
       const approved = stagingCampaigns.filter(c => c.reviewStatus === 'approved');
       const rejected = stagingCampaigns.filter(c => c.reviewStatus === 'rejected');
 
-      const driveConnected = !!(stagingConfig.drive && stagingConfig.drive.folder_id);
+      const driveConnected = !!(stagingConfig.drive && stagingConfig.drive.folder_id && (stagingConfig.drive.credentials_path || stagingConfig.drive.key_path));
       const tgConnected = !!(stagingConfig.telegram && stagingConfig.telegram.bot_token && stagingConfig.telegram.chat_id);
 
       dashboard.innerHTML = `<div class="staging-view">
         <div class="staging-title">Staging Area</div>
         <div class="staging-subtitle">Review completed campaigns and approve content for distribution.</div>
+        ${window.isCloudMode && !stagingAccess.can_edit ? '<div class="storage-empty" style="margin-bottom:16px"><h3>Read-only access</h3><p>Your team role can view staging integrations but cannot change them.</p></div>' : ''}
 
         <!-- Review Tabs -->
         <div class="staging-tabs">
@@ -3006,22 +3548,22 @@
               </div>
               <div class="staging-connector-field">
                 <div class="staging-field-label">Service Account JSON Key Path</div>
-                <input class="staging-field-input" id="drive-key-path" placeholder="/path/to/service-account.json" value="${escapeHtml(stagingConfig.drive.key_path || '')}">
+                <input class="staging-field-input" id="drive-key-path" placeholder="/path/to/service-account.json" value="${escapeHtml(stagingConfig.drive.credentials_path || stagingConfig.drive.key_path || '')}" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>
               </div>
               <div class="staging-connector-field">
                 <div class="staging-field-label">Drive Folder ID</div>
-                <input class="staging-field-input" id="drive-folder-id" placeholder="1a2b3c4d5e6f..." value="${escapeHtml(stagingConfig.drive.folder_id || '')}">
+                <input class="staging-field-input" id="drive-folder-id" placeholder="1a2b3c4d5e6f..." value="${escapeHtml(stagingConfig.drive.folder_id || '')}" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>
               </div>
               <div class="staging-connector-field">
                 <label class="brainstorm-check-row" style="padding:0">
-                  <input type="checkbox" id="drive-auto-upload" ${stagingConfig.drive.auto_upload ? 'checked' : ''}> Auto-upload when pipeline completes
+                  <input type="checkbox" id="drive-auto-upload" ${stagingConfig.drive.auto_upload ? 'checked' : ''} ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}> Auto-upload when pipeline completes
                 </label>
               </div>
             </div>
             <div class="staging-connector-actions">
-              <button class="staging-btn primary" onclick="saveStagingDrive()">Save</button>
-              <button class="staging-btn secondary" onclick="testStagingDrive()">Test</button>
-              ${driveConnected ? '<button class="staging-btn danger" onclick="disconnectStaging(\'drive\')">Disconnect</button>' : ''}
+              <button class="staging-btn primary" onclick="saveStagingDrive()" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Save</button>
+              <button class="staging-btn secondary" onclick="testStagingDrive()" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Test</button>
+              ${driveConnected ? `<button class="staging-btn danger" onclick="disconnectStaging('drive')" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Disconnect</button>` : ''}
             </div>
           </div>
           <div class="staging-connector">
@@ -3040,25 +3582,25 @@
               </div>
               <div class="staging-connector-field">
                 <div class="staging-field-label">Bot Token</div>
-                <input class="staging-field-input" id="tg-bot-token" type="password" placeholder="123456:ABC-DEF..." value="${escapeHtml(stagingConfig.telegram.bot_token || '')}">
+                <input class="staging-field-input" id="tg-bot-token" type="password" placeholder="123456:ABC-DEF..." value="${escapeHtml(stagingConfig.telegram.bot_token || '')}" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>
               </div>
               <div class="staging-connector-field">
                 <div class="staging-field-label">Group Chat ID</div>
-                <input class="staging-field-input" id="tg-chat-id" placeholder="-1001234567890 or @groupname" value="${escapeHtml(stagingConfig.telegram.chat_id || '')}">
+                <input class="staging-field-input" id="tg-chat-id" placeholder="-1001234567890 or @groupname" value="${escapeHtml(stagingConfig.telegram.chat_id || '')}" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>
               </div>
               <div class="staging-connector-field">
                 <div class="staging-field-label">Notify on</div>
                 <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
-                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-complete" ${(stagingConfig.telegram.notify_complete !== false) ? 'checked' : ''}> Campaign completed</label>
-                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-approval" ${stagingConfig.telegram.notify_approval ? 'checked' : ''}> Content awaiting approval</label>
-                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-error" ${(stagingConfig.telegram.notify_error !== false) ? 'checked' : ''}> Pipeline errors</label>
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-complete" ${(stagingConfig.telegram.notify_complete !== false) ? 'checked' : ''} ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}> Campaign completed</label>
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-approval" ${stagingConfig.telegram.notify_approval ? 'checked' : ''} ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}> Content awaiting approval</label>
+                  <label class="brainstorm-check-row" style="padding:0"><input type="checkbox" id="tg-notify-error" ${(stagingConfig.telegram.notify_error !== false) ? 'checked' : ''} ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}> Pipeline errors</label>
                 </div>
               </div>
             </div>
             <div class="staging-connector-actions">
-              <button class="staging-btn primary" onclick="saveStagingTelegram()">Save</button>
-              <button class="staging-btn secondary" onclick="testStagingTelegram()">Test</button>
-              ${tgConnected ? '<button class="staging-btn danger" onclick="disconnectStaging(\'telegram\')">Disconnect</button>' : ''}
+              <button class="staging-btn primary" onclick="saveStagingTelegram()" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Save</button>
+              <button class="staging-btn secondary" onclick="testStagingTelegram()" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Test</button>
+              ${tgConnected ? `<button class="staging-btn danger" onclick="disconnectStaging('telegram')" ${window.isCloudMode && !stagingAccess.can_edit ? 'disabled' : ''}>Disconnect</button>` : ''}
             </div>
           </div>
         </div>
@@ -3144,32 +3686,55 @@
       renderStagingReviewList();
     }
 
-    function saveStagingDrive() {
+    async function saveStagingDrive() {
+      if (window.isCloudMode && !stagingAccess.can_edit) { alert('Only owners and admins can change staging integrations.'); return; }
       stagingConfig.drive = {
+        ...stagingConfig.drive,
+        credentials_path: document.getElementById('drive-key-path').value.trim(),
         key_path: document.getElementById('drive-key-path').value.trim(),
         folder_id: document.getElementById('drive-folder-id').value.trim(),
         auto_upload: document.getElementById('drive-auto-upload').checked
       };
-      saveStagingConfig();
+      await saveStagingConfig();
       showStagingSaved('drive-saved');
     }
 
-    function saveStagingTelegram() {
+    async function saveStagingTelegram() {
+      if (window.isCloudMode && !stagingAccess.can_edit) { alert('Only owners and admins can change staging integrations.'); return; }
       stagingConfig.telegram = {
+        ...stagingConfig.telegram,
         bot_token: document.getElementById('tg-bot-token').value.trim(),
         chat_id: document.getElementById('tg-chat-id').value.trim(),
         notify_complete: document.getElementById('tg-notify-complete').checked,
         notify_approval: document.getElementById('tg-notify-approval').checked,
         notify_error: document.getElementById('tg-notify-error').checked
       };
-      saveStagingConfig();
+      await saveStagingConfig();
       showStagingSaved('tg-saved');
     }
 
-    function saveStagingConfig() {
-      // Save config — since this is a static dashboard, copy the config command
-      const configJson = JSON.stringify(stagingConfig, null, 2);
+    async function saveStagingConfig() {
+      if (window.isCloudMode) {
+        const driveSaved = await cloudAPI.saveStagingConfig('drive', stagingConfig.drive || {});
+        const telegramSaved = await cloudAPI.saveStagingConfig('telegram', stagingConfig.telegram || {});
+        if (!driveSaved || !telegramSaved) {
+          alert('Failed to save staging integrations.');
+          return false;
+        }
+        return true;
+      }
+
+      const localConfig = {
+        drive: {
+          ...stagingConfig.drive,
+          credentials_path: stagingConfig.drive.credentials_path || stagingConfig.drive.key_path || '',
+          key_path: stagingConfig.drive.credentials_path || stagingConfig.drive.key_path || ''
+        },
+        telegram: { ...(stagingConfig.telegram || {}) }
+      };
+      const configJson = JSON.stringify(localConfig, null, 2);
       copyToClipboard('echo ' + "'" + configJson + "'" + ' > ~/.marketing-pipeline/staging-config.json');
+      return true;
     }
 
     function showStagingSaved(id) {
@@ -3177,25 +3742,58 @@
       if (el) { el.textContent = '\u2713 Saved'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2500); }
     }
 
-    function testStagingDrive() {
+    async function testStagingDrive() {
+      if (window.isCloudMode && !stagingAccess.can_edit) { alert('Only owners and admins can test staging integrations.'); return; }
       const keyPath = document.getElementById('drive-key-path').value.trim();
       const folderId = document.getElementById('drive-folder-id').value.trim();
       if (!keyPath || !folderId) { alert('Please fill in both fields first.'); return; }
+      if (window.isCloudMode) {
+        stagingConfig.drive = {
+          ...stagingConfig.drive,
+          credentials_path: keyPath,
+          key_path: keyPath,
+          folder_id: folderId,
+          auto_upload: document.getElementById('drive-auto-upload').checked
+        };
+        const saved = await saveStagingConfig();
+        if (!saved) return;
+        const result = await cloudAPI.testStagingService('drive');
+        alert(result.success ? 'Connection successful: ' + result.message : 'Failed: ' + result.message);
+        return;
+      }
       copyToClipboard(`/marketing staging test-drive --key "${keyPath}" --folder "${folderId}"`);
     }
 
-    function testStagingTelegram() {
+    async function testStagingTelegram() {
+      if (window.isCloudMode && !stagingAccess.can_edit) { alert('Only owners and admins can test staging integrations.'); return; }
       const token = document.getElementById('tg-bot-token').value.trim();
       const chatId = document.getElementById('tg-chat-id').value.trim();
       if (!token || !chatId) { alert('Please fill in both Bot Token and Chat ID first.'); return; }
+      if (window.isCloudMode) {
+        stagingConfig.telegram = {
+          ...stagingConfig.telegram,
+          bot_token: token,
+          chat_id: chatId,
+          notify_complete: document.getElementById('tg-notify-complete').checked,
+          notify_approval: document.getElementById('tg-notify-approval').checked,
+          notify_error: document.getElementById('tg-notify-error').checked
+        };
+        const saved = await saveStagingConfig();
+        if (!saved) return;
+        const result = await cloudAPI.testStagingService('telegram');
+        alert(result.success ? 'Connection successful: ' + result.message : 'Failed: ' + result.message);
+        return;
+      }
       copyToClipboard(`/marketing staging test-telegram --token "${token}" --chat "${chatId}"`);
     }
 
-    function disconnectStaging(service) {
+    async function disconnectStaging(service) {
+      if (window.isCloudMode && !stagingAccess.can_edit) { alert('Only owners and admins can remove staging integrations.'); return; }
       if (!confirm('Disconnect ' + service + '? This will clear the saved credentials.')) return;
       stagingConfig[service] = {};
-      saveStagingConfig();
-      renderStagingView();
+      if (window.isCloudMode) await cloudAPI.deleteStagingConfig(service);
+      else await saveStagingConfig();
+      await renderStagingView();
     }
 
     // ===================== BRAINSTORM VIEW =====================
@@ -3725,12 +4323,14 @@
     function updateCloudStatus(connected) {
       const dot = document.getElementById('status-dot');
       const refresh = document.getElementById('status-refresh');
-      if (dot && connected) {
+      if (dot) {
         dot.style.display = '';
         dot.style.background = connected ? 'var(--interactive-success)' : 'var(--text-error)';
       }
       if (refresh) {
-        refresh.textContent = connected ? 'Cloud: ' + (cloudAPI.user ? cloudAPI.user.email : 'Connected') : 'Cloud: Disconnected';
+        const team = getActiveTeamMeta();
+        const teamLabel = team ? ` · ${team.name}` : '';
+        refresh.textContent = connected ? 'Cloud: ' + (cloudAPI.user ? cloudAPI.user.email : 'Connected') + teamLabel : 'Cloud: Disconnected';
       }
     }
 

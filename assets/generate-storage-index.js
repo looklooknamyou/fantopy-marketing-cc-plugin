@@ -4,7 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 const HOME = process.env.HOME || process.env.USERPROFILE;
-const OUTPUT_DIR = path.join(HOME, 'marketing-output');
+const OUTPUT_DIR_CANDIDATES = [
+  process.env.MARKETING_OUTPUT_DIR,
+  path.resolve(process.cwd(), 'marketing-output'),
+  path.resolve(__dirname, '..', 'marketing-output'),
+  path.join(HOME, 'marketing-output')
+].filter(Boolean);
 const CAMPAIGNS_DIR = path.join(HOME, '.marketing-pipeline', 'campaigns');
 const OUT_FILE = path.join(__dirname, 'storage-index.json');
 
@@ -16,9 +21,14 @@ function mediaTypeFromName(name) {
 }
 
 function servedPathFromFull(fullPath) {
-  // Convert absolute path to path relative to marketing-output symlink
-  const moIdx = fullPath.indexOf('/marketing-output/');
-  if (moIdx !== -1) return fullPath.substring(moIdx + 1); // "marketing-output/slug/..."
+  const normalized = fullPath.split(path.sep).join('/');
+  for (const baseDir of OUTPUT_DIR_CANDIDATES) {
+    const base = path.resolve(baseDir).split(path.sep).join('/');
+    if (normalized === base || normalized.startsWith(base + '/')) {
+      const relative = normalized.slice(base.length).replace(/^\/+/, '');
+      return relative ? `marketing-output/${relative}` : 'marketing-output';
+    }
+  }
   return null;
 }
 
@@ -80,6 +90,16 @@ function scanDir(baseDir) {
   return campaigns;
 }
 
+function uniqueByOutputDir(campaigns) {
+  const seen = new Set();
+  return campaigns.filter(campaign => {
+    const key = path.resolve(campaign.outputDir);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function scanBatchDirs() {
   const campaigns = [];
   if (!fs.existsSync(CAMPAIGNS_DIR)) return campaigns;
@@ -127,7 +147,8 @@ function scanBatchDirs() {
   return campaigns;
 }
 
-const allCampaigns = [...scanDir(OUTPUT_DIR), ...scanBatchDirs()];
+const directCampaigns = OUTPUT_DIR_CANDIDATES.flatMap(scanDir);
+const allCampaigns = uniqueByOutputDir([...directCampaigns, ...scanBatchDirs()]);
 allCampaigns.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
 const index = { generated: new Date().toISOString(), campaigns: allCampaigns };
