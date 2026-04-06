@@ -260,12 +260,14 @@ Spawn all 4 in a single message with multiple Task tool calls:
 
   Report the video file sizes when done."
 
-**Agent G: AI Media Production (Gemini)**
+**Agent G: AI Media Production (Qwen/Wan/Gemini)**
 - subagent_type: "gemini-media-producer"
 - model: sonnet
 - Prompt: "Generate professional marketing visual assets for this campaign: {brief}.
 
   Read the marketing strategy at ./marketing-output/{slug}/02-strategy/marketing-strategy.md to understand the campaign positioning, brand tone, and key messages.
+
+  If the user supplied media generation preferences or a `media_config` object, preserve those choices and write the matching `provider` and `model` fields into each asset in `media-brief.json`.
 
   Create the following assets in ./marketing-output/{slug}/03-content/media/:
   1. Hero banner image (1920x1080, 16:9) → hero-banner.png
@@ -277,7 +279,7 @@ Spawn all 4 in a single message with multiple Task tool calls:
 
   The generation script and requirements are at: ~/.claude/plugins/local/marketing-pipeline/assets/gemini-media/
 
-  IMPORTANT: Requires GEMINI_API_KEY environment variable to be set."
+  IMPORTANT: Qwen image assets and Wan video assets require DASHSCOPE_API_KEY. Gemini assets require GEMINI_API_KEY (or GOOGLE_API_KEY)."
 
 **Wait for all 4.**
 

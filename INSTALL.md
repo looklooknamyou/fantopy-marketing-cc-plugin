@@ -238,8 +238,11 @@ Create or update `~/.config/opencode/opencode.json`:
 Create a `.env` file in your project root for API keys:
 
 ```bash
-# Gemini API key (for AI-powered media generation)
+# Gemini API key (for Gemini image/video generation)
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# DashScope API key (for Qwen image generation and Wan video generation)
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
 
 # Cloud API key (generated via /marketing cloud register)
 MARKETING_CLOUD_API_KEY=your_cloud_api_key_here
@@ -300,16 +303,17 @@ For real-time dashboards, team collaboration, and cloud sync:
    /marketing teams create "My Team"
    ```
 
-### Gemini Media Generation
+### Media Generation (Gemini + Qwen)
 
-If you have a Gemini API key, the pipeline can generate images (Imagen 4.0) and video clips (Veo 3.0) for your campaigns. Set your key:
+If you set a DashScope key, the pipeline can use Qwen for images and Wan for video generation. Gemini remains available as an alternate provider for supported assets.
 
 ```bash
 echo "GEMINI_API_KEY=your_key_here" >> .env
+echo "DASHSCOPE_API_KEY=your_dashscope_key_here" >> .env
 chmod 600 .env
 ```
 
-The pipeline will automatically use Gemini for media generation when the key is available.
+The pipeline can now carry per-asset media selections through `--media-config`, so the copied campaign commands can choose Qwen or Gemini for images and Wan or Gemini for video.
 
 ---
 

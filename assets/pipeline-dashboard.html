@@ -1707,8 +1707,198 @@
       cadence: 'weekly',
       day: 1,
       hour: 9,
-      totalBatches: 12
+      totalBatches: 12,
+      mediaPreferences: {}
     };
+
+    const MEDIA_ASSET_DEFS = [
+      { id: 'hero-banner', label: 'Hero Banner', type: 'image', aspectRatio: '16:9' },
+      { id: 'social-graphic', label: 'Social Graphic', type: 'image', aspectRatio: '1:1' },
+      { id: 'blog-header', label: 'Blog Header', type: 'image', aspectRatio: '16:9' },
+      { id: 'product-teaser', label: 'Product Teaser Video', type: 'video', duration: 8 }
+    ];
+
+    const MEDIA_PROVIDER_CATALOG = {
+      gemini: {
+        label: 'Gemini',
+        imageModels: [
+          { id: 'imagen-4.0-generate-001', label: 'Imagen 4.0' },
+          { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4.0 Fast' },
+          { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
+          { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image' }
+        ],
+        videoModels: [
+          { id: 'veo-2.0-generate-001', label: 'Veo 2' }
+        ]
+      },
+      wan: {
+        label: 'Wan',
+        imageModels: [],
+        videoModels: [
+          { id: 'wan2.2-t2v-plus', label: 'Wan 2.2 T2V Plus' },
+          { id: 'wanx2.1-t2v-turbo', label: 'Wan 2.1 T2V Turbo' },
+          { id: 'wanx2.1-t2v-plus', label: 'Wan 2.1 T2V Plus' }
+        ]
+      },
+      qwen: {
+        label: 'Qwen',
+        imageModels: [
+          { id: 'qwen-image-2.0-pro', label: 'Qwen Image 2.0 Pro' },
+          { id: 'qwen-image-max', label: 'Qwen Image Max' },
+          { id: 'qwen-image-plus', label: 'Qwen Image Plus' },
+          { id: 'z-image-turbo', label: 'Z-Image Turbo' }
+        ],
+        videoModels: []
+      }
+    };
+
+    function createDefaultMediaPreferences() {
+      const preferences = {};
+      MEDIA_ASSET_DEFS.forEach(asset => {
+        const defaultProvider = asset.type === 'video' ? 'wan' : 'qwen';
+        const models = getMediaModelsForProvider(asset.type, defaultProvider);
+        preferences[asset.id] = {
+          provider: defaultProvider,
+          model: models.length ? models[0].id : ''
+        };
+      });
+      return preferences;
+    }
+
+    function getMediaModelsForProvider(mediaType, providerId) {
+      const provider = MEDIA_PROVIDER_CATALOG[providerId];
+      if (!provider) return [];
+      return mediaType === 'video' ? (provider.videoModels || []) : (provider.imageModels || []);
+    }
+
+    function normalizeMediaPreferences(prefs) {
+      const normalized = {};
+      MEDIA_ASSET_DEFS.forEach(asset => {
+        const fallbackProvider = asset.type === 'video' ? 'wan' : 'qwen';
+        const incoming = prefs && prefs[asset.id] ? prefs[asset.id] : {};
+        let provider = incoming.provider || fallbackProvider;
+        let models = getMediaModelsForProvider(asset.type, provider);
+        if (models.length === 0) {
+          provider = fallbackProvider;
+          models = getMediaModelsForProvider(asset.type, provider);
+        }
+        const hasModel = models.some(model => model.id === incoming.model);
+        normalized[asset.id] = {
+          provider,
+          model: hasModel ? incoming.model : (models[0] ? models[0].id : '')
+        };
+      });
+      return normalized;
+    }
+
+    function ensureWizardMediaPreferences() {
+      wizardState.mediaPreferences = normalizeMediaPreferences(wizardState.mediaPreferences || createDefaultMediaPreferences());
+      return wizardState.mediaPreferences;
+    }
+
+    function getWizardMediaSelection(assetId) {
+      const prefs = ensureWizardMediaPreferences();
+      return prefs[assetId];
+    }
+
+    function renderMediaPreferencesSection(sectionId, hidden) {
+      ensureWizardMediaPreferences();
+      return `
+        <div id="${sectionId}" style="${hidden ? 'display:none;' : ''}margin-top:16px;padding:16px;border:1px solid var(--background-modifier-border);border-radius:var(--radius-m);background:var(--background-secondary);">
+          <div class="wizard-label">Media Generation Models</div>
+          <p class="wizard-hint">Choose the provider and model for each campaign asset. Qwen is the default for image assets. Wan is the default for video assets, with Gemini available as an alternate video provider.</p>
+          <div style="display:grid;gap:12px;">
+            ${MEDIA_ASSET_DEFS.map(asset => renderMediaPreferenceCard(asset)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMediaPreferenceCard(asset) {
+      const selection = getWizardMediaSelection(asset.id);
+      const availableProviders = Object.entries(MEDIA_PROVIDER_CATALOG).filter(([, provider]) => {
+        const models = asset.type === 'video' ? provider.videoModels : provider.imageModels;
+        return (models || []).length > 0;
+      });
+      const models = getMediaModelsForProvider(asset.type, selection.provider);
+      const meta = asset.type === 'video'
+        ? `${asset.duration || 8}s video`
+        : `${asset.aspectRatio || '1:1'} image`;
+      return `
+        <div style="padding:12px;border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);background:var(--background-primary);">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;">
+            <div>
+              <div style="font-weight:600;">${asset.label}</div>
+              <div style="font-size:12px;color:var(--text-faint);">${meta}</div>
+            </div>
+            ${asset.type === 'video' ? '<span style="font-size:11px;color:var(--text-faint);">Wan default</span>' : ''}
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+            <label style="display:block;">
+              <div class="wizard-label" style="margin-bottom:6px;">Provider</div>
+              <select class="wizard-input" onchange="setWizardMediaProvider('${asset.id}', this.value)">
+                ${availableProviders.map(([providerId, provider]) => `<option value="${providerId}" ${selection.provider === providerId ? 'selected' : ''}>${provider.label}</option>`).join('')}
+              </select>
+            </label>
+            <label style="display:block;">
+              <div class="wizard-label" style="margin-bottom:6px;">Model</div>
+              <select class="wizard-input" onchange="setWizardMediaModel('${asset.id}', this.value)">
+                ${models.map(model => `<option value="${model.id}" ${selection.model === model.id ? 'selected' : ''}>${model.label}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+        </div>
+      `;
+    }
+
+    function refreshMediaPreferenceSections() {
+      const shortSection = document.getElementById('short-media-config');
+      if (shortSection) shortSection.outerHTML = renderMediaPreferencesSection('short-media-config', shortCampaignMode === 'research');
+      const wizardSection = document.getElementById('wizard-media-config');
+      if (wizardSection) wizardSection.outerHTML = renderMediaPreferencesSection('wizard-media-config', false);
+    }
+
+    function setWizardMediaProvider(assetId, provider) {
+      const prefs = ensureWizardMediaPreferences();
+      const asset = MEDIA_ASSET_DEFS.find(item => item.id === assetId);
+      if (!asset) return;
+      const models = getMediaModelsForProvider(asset.type, provider);
+      if (models.length === 0) return;
+      prefs[assetId] = { provider, model: models[0].id };
+      refreshMediaPreferenceSections();
+    }
+
+    function setWizardMediaModel(assetId, model) {
+      const prefs = ensureWizardMediaPreferences();
+      if (!prefs[assetId]) return;
+      prefs[assetId].model = model;
+    }
+
+    function getSelectedMediaConfig() {
+      return normalizeMediaPreferences(ensureWizardMediaPreferences());
+    }
+
+    function getSelectedMediaConfigForMode(mode) {
+      if (mode === 'research') return null;
+      return getSelectedMediaConfig();
+    }
+
+    function buildMediaConfigFlag(mediaConfig) {
+      if (!mediaConfig) return '';
+      return ` --media-config '${JSON.stringify(mediaConfig)}'`;
+    }
+
+    function escapeCommandValue(value) {
+      return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    function renderMediaSummaryList(mediaConfig) {
+      if (!mediaConfig) return '<div><strong>Media:</strong> Not included for this pipeline mode</div>';
+      return MEDIA_ASSET_DEFS.map(asset => {
+        const pref = mediaConfig[asset.id];
+        return `<div style="margin-bottom:6px;"><strong>${asset.label}:</strong> ${escapeHtml(pref.provider)} / ${escapeHtml(pref.model)}</div>`;
+      }).join('');
+    }
 
     // ===================== URL HELPERS =====================
     const CLOUD_BOOTSTRAP_STORAGE_KEY = 'marketing-pipeline-cloud-config';
@@ -2138,7 +2328,17 @@
       const dashboard = document.getElementById('dashboard');
       currentView = 'wizard';
       wizardCampaignMode = null;
-      wizardState = { step: 1, brief: '', contentTypes: ['blog-post', 'social-media'], platforms: ['twitter'], cadence: 'weekly', day: 1, hour: 9, totalBatches: 12 };
+      wizardState = {
+        step: 1,
+        brief: '',
+        contentTypes: ['blog-post', 'social-media'],
+        platforms: ['twitter'],
+        cadence: 'weekly',
+        day: 1,
+        hour: 9,
+        totalBatches: 12,
+        mediaPreferences: createDefaultMediaPreferences()
+      };
 
       dashboard.innerHTML = renderWizardTypePicker();
       setActiveTab('wizard');
@@ -2210,6 +2410,8 @@
               <button class="brainstorm-type-option" id="mode-research" onclick="setShortMode('research')">Research Only</button>
             </div>
 
+            ${renderMediaPreferencesSection('short-media-config', false)}
+
             <div class="wizard-nav" style="margin-top:24px">
               <button class="wizard-btn wizard-btn-back" onclick="renderWizardView()">Back</button>
               <button class="wizard-btn wizard-btn-next" onclick="launchShortCampaign()">Generate & Copy Command</button>
@@ -2226,13 +2428,15 @@
       if (mode === 'full-funnel') document.getElementById('mode-full').classList.add('selected');
       else if (mode === 'content') document.getElementById('mode-content').classList.add('selected');
       else document.getElementById('mode-research').classList.add('selected');
+      refreshMediaPreferenceSections();
     }
 
     function launchShortCampaign() {
       const brief = (document.getElementById('short-brief') || {}).value || '';
       if (!brief.trim()) { alert('Please enter a campaign brief.'); return; }
       const cmdMap = { 'full-funnel': 'campaign', 'content': 'content', 'research': 'research' };
-      const command = `/marketing ${cmdMap[shortCampaignMode] || 'campaign'} ${brief.trim()}`;
+      const mediaFlag = buildMediaConfigFlag(getSelectedMediaConfigForMode(shortCampaignMode));
+      const command = `/marketing ${cmdMap[shortCampaignMode] || 'campaign'} "${escapeCommandValue(brief.trim())}"${mediaFlag}`;
       copyToClipboard(command, document.querySelector('.wizard-btn-next'));
     }
 
@@ -2311,6 +2515,7 @@
             <label class="wizard-checkbox-label"><div class="wizard-checkbox ${wizardState.platforms.includes('linkedin') ? 'checked' : ''}" onclick="togglePlatform('linkedin')"></div> LinkedIn</label>
           </div>
         ` : ''}
+        ${renderMediaPreferencesSection('wizard-media-config', false)}
         <div class="wizard-nav">
           <button class="wizard-btn wizard-btn-back" onclick="wizardBack()">Back</button>
           <button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue</button>
@@ -2351,6 +2556,7 @@
     function renderStep4() {
       const command = generateWizardCommand();
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const mediaConfig = getSelectedMediaConfig();
       return `
         <div class="wizard-step-title">Review & Launch</div>
         <div class="wizard-command-box">
@@ -2364,7 +2570,8 @@
           <div style="margin-bottom:6px;"><strong>Cadence:</strong> ${wizardState.cadence}</div>
           ${wizardState.cadence !== 'daily' ? `<div style="margin-bottom:6px;"><strong>Day:</strong> ${days[wizardState.day]}</div>` : ''}
           <div style="margin-bottom:6px;"><strong>Time:</strong> ${wizardState.hour.toString().padStart(2, '0')}:00</div>
-          <div><strong>Total Batches:</strong> ${wizardState.totalBatches}</div>
+          <div style="margin-bottom:6px;"><strong>Total Batches:</strong> ${wizardState.totalBatches}</div>
+          ${renderMediaSummaryList(mediaConfig)}
         </div>
         <button class="wizard-copy-btn" id="wizard-copy-btn" onclick="copyWizardCommand()">Copy & Launch</button>
         <div class="wizard-nav">
@@ -2375,7 +2582,8 @@
     }
 
     function generateWizardCommand() {
-      return `/marketing sustain create "${wizardState.brief}" --cadence ${wizardState.cadence} --batches ${wizardState.totalBatches} --day ${wizardState.day} --hour ${wizardState.hour} --types ${wizardState.contentTypes.join(',')}`;
+      const mediaFlag = buildMediaConfigFlag(getSelectedMediaConfig());
+      return `/marketing sustain create "${escapeCommandValue(wizardState.brief)}" --cadence ${wizardState.cadence} --batches ${wizardState.totalBatches} --day ${wizardState.day} --hour ${wizardState.hour} --types ${wizardState.contentTypes.join(',')}${mediaFlag}`;
     }
 
     function wizardNext() {
@@ -3801,7 +4009,7 @@
     let brainstormTypes = new Set(['blog-post', 'social-media']);
     let brainstormData = [];
     let brainstormGroupOpen = {};
-    let brainstormSelectedProvider = 'gemini';
+    let brainstormSelectedProvider = 'qwen';
     let brainstormSelectedModel = '';
     const brainstormProviders = {
       gemini: {

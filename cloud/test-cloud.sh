@@ -9,6 +9,8 @@ SUPABASE="http://localhost:8000"
 SDK_PATH="/Users/bot/Documents/marketing-pipeline-plugin/cloud/sdk"
 DASHBOARD_PATH="/Users/bot/Documents/marketing-pipeline-plugin/assets/pipeline-dashboard.html"
 TS=$(date +%s)
+TEST_ADMIN_API_KEY="${ADMIN_API_KEY:-${MARKETING_CLOUD_API_KEY:-}}"
+TEST_REGISTRATION_PASSWORD="${TEST_REGISTRATION_PASSWORD:-${REGISTRATION_PASSWORD:-}}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -40,6 +42,15 @@ fail() {
 section() {
   echo ""
   echo -e "${CYAN}${BOLD}=== $1 ===${NC}"
+}
+
+skip() {
+  PASS_COUNT=$((PASS_COUNT + 1))
+  TOTAL_COUNT=$((TOTAL_COUNT + 1))
+  echo -e "  ${YELLOW}SKIP${NC}  $1"
+  if [ -n "${2:-}" ]; then
+    echo -e "        ${YELLOW}-> $2${NC}"
+  fi
 }
 
 # Helper: extract JSON field (requires jq-like parsing with python or node)
@@ -87,6 +98,30 @@ http_body() {
   echo "$1" | sed '$d'
 }
 
+register_user() {
+  local email="$1"
+  local display_name="$2"
+
+  if [ -n "$TEST_ADMIN_API_KEY" ]; then
+    curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $TEST_ADMIN_API_KEY" \
+      -d "{\"email\":\"$email\",\"display_name\":\"$display_name\"}"
+    return
+  fi
+
+  if [ -n "$TEST_REGISTRATION_PASSWORD" ]; then
+    curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
+      -H "Content-Type: application/json" \
+      -d "{\"email\":\"$email\",\"display_name\":\"$display_name\",\"password\":\"$TEST_REGISTRATION_PASSWORD\"}"
+    return
+  fi
+
+  curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$email\",\"display_name\":\"$display_name\"}"
+}
+
 echo -e "${BOLD}Marketing Pipeline Cloud - End-to-End Test Suite${NC}"
 echo "API:       $API"
 echo "Supabase:  $SUPABASE"
@@ -115,9 +150,7 @@ USER1_EMAIL="test-${TS}-user1@test.com"
 USER1_NAME="Test User 1 ($TS)"
 
 # 1.1 Register new user
-REG_RESP=$(curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$USER1_EMAIL\",\"display_name\":\"$USER1_NAME\"}")
+REG_RESP=$(register_user "$USER1_EMAIL" "$USER1_NAME")
 REG_CODE=$(http_status "$REG_RESP")
 REG_BODY=$(http_body "$REG_RESP")
 USER1_KEY=$(json_field "$REG_BODY" "api_key")
@@ -183,9 +216,7 @@ else
 fi
 
 # 1.4 Duplicate email
-DUP_RESP=$(curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$USER1_EMAIL\",\"display_name\":\"Duplicate\"}")
+DUP_RESP=$(register_user "$USER1_EMAIL" "Duplicate")
 DUP_CODE=$(http_status "$DUP_RESP")
 
 if [ "$DUP_CODE" = "409" ]; then
@@ -299,9 +330,7 @@ else
 fi
 
 # 2.5 Register second user and join
-REG2_RESP=$(curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$USER2_EMAIL\",\"display_name\":\"Test User 2 ($TS)\"}")
+REG2_RESP=$(register_user "$USER2_EMAIL" "Test User 2 ($TS)")
 REG2_CODE=$(http_status "$REG2_RESP")
 REG2_BODY=$(http_body "$REG2_RESP")
 USER2_KEY=$(json_field "$REG2_BODY" "api_key")
@@ -750,9 +779,7 @@ section "6. Access Control Tests"
 
 # 6.1 Register third user (NOT in the team)
 USER3_EMAIL="test-${TS}-user3@test.com"
-REG3_RESP=$(curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$USER3_EMAIL\",\"display_name\":\"Outsider User 3 ($TS)\"}")
+REG3_RESP=$(register_user "$USER3_EMAIL" "Outsider User 3 ($TS)")
 REG3_CODE=$(http_status "$REG3_RESP")
 REG3_BODY=$(http_body "$REG3_RESP")
 USER3_KEY=$(json_field "$REG3_BODY" "api_key")
@@ -797,9 +824,7 @@ VINVITE_BODY=$(http_body "$VINVITE_RESP")
 VINVITE_TOKEN=$(json_field "$VINVITE_BODY" "invitation.token")
 
 # Register viewer
-REG_VIEWER_RESP=$(curl -s -w '\n%{http_code}' -X POST "$API/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$VIEWER_EMAIL\",\"display_name\":\"Viewer User ($TS)\"}")
+REG_VIEWER_RESP=$(register_user "$VIEWER_EMAIL" "Viewer User ($TS)")
 REG_VIEWER_BODY=$(http_body "$REG_VIEWER_RESP")
 VIEWER_KEY=$(json_field "$REG_VIEWER_BODY" "api_key")
 
@@ -834,11 +859,11 @@ fi
 # ============================================================================
 section "7. Dashboard Cloud Mode Tests"
 
-# 7.1 Dashboard contains Supabase Realtime code
-if grep -q "supabase" "$DASHBOARD_PATH" && grep -q "Realtime" "$DASHBOARD_PATH"; then
-  pass "Dashboard HTML contains Supabase Realtime code"
+# 7.1 Dashboard contains cloud bootstrap flow
+if grep -q "cloud-config.json" "$DASHBOARD_PATH" && grep -q "window.supabase.createClient" "$DASHBOARD_PATH"; then
+  pass "Dashboard HTML contains cloud bootstrap and Supabase client init"
 else
-  fail "Dashboard HTML contains Supabase Realtime code"
+  fail "Dashboard HTML contains cloud bootstrap and Supabase client init"
 fi
 
 # 7.2 Dashboard detects cloud mode from URL params
@@ -853,15 +878,15 @@ else
   fi
 fi
 
-# 7.3 Dashboard loads supabase JS client
-if grep -q "supabase-js" "$DASHBOARD_PATH" || grep -q "supabase.min.js" "$DASHBOARD_PATH"; then
-  pass "Dashboard loads Supabase JS client"
+# 7.3 Dashboard loads local Supabase JS bundle
+if grep -q "src=\"./supabase.js\"" "$DASHBOARD_PATH" || grep -q "src=\"supabase.js\"" "$DASHBOARD_PATH"; then
+  pass "Dashboard loads local Supabase JS bundle"
 else
-  fail "Dashboard loads Supabase JS client"
+  fail "Dashboard loads local Supabase JS bundle"
 fi
 
 # 7.4 Dashboard subscribes to campaign changes
-if grep -q "subscribe" "$DASHBOARD_PATH" && grep -q "campaign" "$DASHBOARD_PATH"; then
+if grep -q "postgres_changes" "$DASHBOARD_PATH" && grep -q "subscribeToUpdates" "$DASHBOARD_PATH"; then
   pass "Dashboard subscribes to campaign changes via Realtime"
 else
   fail "Dashboard subscribes to campaign changes via Realtime"

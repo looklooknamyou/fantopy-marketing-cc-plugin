@@ -50,7 +50,7 @@ node server.js
 ```bash
 curl -X POST http://localhost:3847/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "you@example.com", "display_name": "Your Name"}'
+  -d '{"email": "you@example.com", "display_name": "Your Name", "password": "your-registration-password"}'
 ```
 
 Save the returned `api_key`. Set it as an environment variable:
@@ -58,6 +58,10 @@ Save the returned `api_key`. Set it as an environment variable:
 ```bash
 export MARKETING_CLOUD_API_KEY="your-api-key-here"
 ```
+
+Registration behavior:
+- If the API server has `REGISTRATION_PASSWORD` configured, self-registration requires that password.
+- If self-registration is disabled, an existing team `owner` or `admin` can create users by calling `/api/auth/register` with their `x-api-key`.
 
 ### 5. Configure the CLI
 
@@ -137,12 +141,12 @@ Use `http://localhost:8000` as your Supabase URL.
 
 ## API Reference
 
-All endpoints require `x-api-key` header (except `/api/auth/register`).
+All endpoints require `x-api-key` except self-registration when the server is configured with `REGISTRATION_PASSWORD`.
 
 ### Auth
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/auth/register` | Register user, get API key |
+| POST | `/api/auth/register` | Register user with `password`, or create user as existing owner/admin |
 | GET | `/api/auth/me` | Current user info |
 | POST | `/api/auth/rotate-key` | Generate new API key |
 
@@ -195,4 +199,6 @@ All endpoints require `x-api-key` header (except `/api/auth/register`).
 
 **Dashboard not updating in real-time**: Ensure the migration enabled Realtime on the campaigns table. Check browser console for WebSocket errors.
 
-**Upload failures**: Check Supabase Storage bucket `campaign-deliverables` exists. Max file size is 100MB.
+**Upload failures**: Check Supabase Storage bucket `campaign-deliverables` exists. Max file size is 100MB. On some macOS Docker setups, the API and SDK automatically fall back to local storage under `~/.marketing-pipeline/deliverables-cloud` if Supabase Storage rejects writes with an extended-attributes error.
+
+**Dashboard CORS errors**: The API allows `localhost` and `127.0.0.1` by default on ports `8847`, `8851`, and `3000`. If you override `CORS_ORIGINS`, include the exact dashboard origin you are serving from.

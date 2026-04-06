@@ -17,6 +17,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+const {
+  shouldFallbackToLocal,
+  writeLocalFallback
+} = require('../shared/deliverable-storage');
 
 let supabase = null;
 let currentUser = null;
@@ -180,9 +184,15 @@ async function uploadDeliverable(campaignId, localFilePath, relativePath) {
       upsert: true
     });
 
+  let persistedStoragePath = storagePath;
   if (storageError) {
-    console.error('[cloud] Upload failed:', storageError.message);
-    return false;
+    if (!shouldFallbackToLocal(storageError)) {
+      console.error('[cloud] Upload failed:', storageError.message);
+      return false;
+    }
+    const fallback = writeLocalFallback(storagePath, fileBuffer);
+    persistedStoragePath = fallback.storage_path;
+    console.warn(`[cloud] Storage fallback active for ${relativePath}`);
   }
 
   const { error: dbError } = await supabase
@@ -191,7 +201,7 @@ async function uploadDeliverable(campaignId, localFilePath, relativePath) {
       campaign_id: campaignId,
       name: fileName,
       path: relativePath,
-      storage_path: storagePath,
+      storage_path: persistedStoragePath,
       size_bytes: fileBuffer.length,
       mime_type: mimeType
     }, { onConflict: 'campaign_id,path' });

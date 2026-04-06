@@ -2,6 +2,12 @@ const { Router } = require('express');
 const path = require('path');
 const multer = require('multer');
 const { authMiddleware, teamMemberMiddleware } = require('../middleware/auth');
+const {
+  isLocalRef,
+  readLocalFallback,
+  shouldFallbackToLocal,
+  writeLocalFallback
+} = require('../../shared/deliverable-storage');
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
@@ -187,7 +193,14 @@ router.post('/:id/deliverables', upload.single('file'), async (req, res) => {
       upsert: true
     });
 
-  if (storageError) return res.status(500).json({ error: storageError.message });
+  let persistedStoragePath = storagePath;
+  if (storageError) {
+    if (!shouldFallbackToLocal(storageError)) {
+      return res.status(500).json({ error: storageError.message });
+    }
+    const fallback = writeLocalFallback(storagePath, req.file.buffer);
+    persistedStoragePath = fallback.storage_path;
+  }
 
   const { data, error } = await req.supabase
     .from('deliverables')
@@ -195,7 +208,7 @@ router.post('/:id/deliverables', upload.single('file'), async (req, res) => {
       campaign_id: campaignId,
       name,
       path: safePath,
-      storage_path: storagePath,
+      storage_path: persistedStoragePath,
       size_bytes: req.file.size,
       mime_type: req.file.mimetype
     }, { onConflict: 'campaign_id,path' })
@@ -221,15 +234,21 @@ router.get('/:id/deliverables/:deliverableId/download', async (req, res) => {
 
   if (!deliverable) return res.status(404).json({ error: 'Deliverable not found' });
 
+  const safeName = deliverable.name.replace(/["\\\r\n]/g, '_');
+  res.setHeader('Content-Type', deliverable.mime_type);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+
+  if (isLocalRef(deliverable.storage_path)) {
+    const buffer = readLocalFallback(deliverable.storage_path);
+    if (!buffer) return res.status(404).json({ error: 'Deliverable file not found in local fallback storage' });
+    return res.send(buffer);
+  }
+
   const { data, error } = await req.supabase.storage
     .from('campaign-deliverables')
     .download(deliverable.storage_path);
 
   if (error) return res.status(500).json({ error: error.message });
-
-  const safeName = deliverable.name.replace(/["\\\r\n]/g, '_');
-  res.setHeader('Content-Type', deliverable.mime_type);
-  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
   const buffer = Buffer.from(await data.arrayBuffer());
   res.send(buffer);
 });

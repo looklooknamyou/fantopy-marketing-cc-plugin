@@ -357,7 +357,7 @@ Agents within the same stage run **in parallel**. Stages run **sequentially** (e
 | Content Marketer | content-marketer | haiku | Blog, social, email, landing pages |
 | SEO Specialist | seo-specialist | haiku | Keywords, on-page SEO, link strategy |
 | Video Producer | general-purpose | sonnet | Motion graphics videos via Remotion (product hero, social clip, stats) |
-| Media Producer | gemini-media-producer | sonnet | AI-generated images + video via Gemini API (Imagen + Veo 2) |
+| Media Producer | gemini-media-producer | sonnet | AI-generated images + video via Qwen, Wan, and Gemini models |
 | Business Analyst | business-analyst | sonnet | Quality review, gap analysis |
 | Sales Engineer | sales-engineer | sonnet | Sales readiness, competitive positioning |
 | Orchestrator | marketing-orchestrator | opus | Coordinates all agents, synthesizes strategy |
@@ -390,7 +390,7 @@ marketing-pipeline/
 │   └── plugin.json              # Plugin metadata and registration
 ├── agents/
 │   ├── marketing-orchestrator.md # Core orchestrator (opus model)
-│   └── gemini-media-producer.md  # AI media generation agent (Gemini API)
+│   └── gemini-media-producer.md  # AI media generation agent (Qwen + Wan + Gemini)
 ├── skills/
 │   └── marketing-pipeline/
 │       └── SKILL.md             # Codex skill surface for repo workflows
@@ -408,7 +408,7 @@ marketing-pipeline/
     ├── sustain/                  # Sustained campaign templates
     │   ├── plist-template.xml   # macOS launchd schedule template
     │   └── run-batch-template.sh # Headless batch runner template
-    ├── gemini-media/             # AI media generation via Gemini API
+    ├── gemini-media/             # AI media generation via Qwen + Wan + Gemini
     │   ├── generate_media.py    # Image + video generation script
     │   └── requirements.txt     # Python deps (google-genai)
     └── remotion-template/       # Video generation template project

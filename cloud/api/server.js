@@ -22,7 +22,18 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // C6: CORS with explicit origin whitelist
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:8847,http://localhost:3000').split(',');
+const defaultOrigins = [
+  'http://localhost:8847',
+  'http://localhost:8851',
+  'http://localhost:3000',
+  'http://127.0.0.1:8847',
+  'http://127.0.0.1:8851',
+  'http://127.0.0.1:3000'
+];
+const allowedOrigins = (process.env.CORS_ORIGINS || defaultOrigins.join(','))
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (CLI tools, server-to-server)

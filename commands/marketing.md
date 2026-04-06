@@ -9,11 +9,13 @@ $ARGUMENTS - The campaign brief or topic to execute.
 
 ### If first word is "campaign"
   - Launch full-funnel pipeline
+  - If a `--media-config '<json>'` flag is present, preserve it and pass the parsed media preferences into the orchestrator prompt
 - Launch content-production pipeline
 - Launch market-intelligence pipeline
 
 ### If first word is "content"
   - Launch content-production pipeline
+  - If a `--media-config '<json>'` flag is present, preserve it and pass the parsed media preferences into the content/media generation prompt
 
 ### If first word is "research"
   - Launch market-intelligence pipeline
@@ -57,7 +59,7 @@ $ARGUMENTS - The campaign brief or topic to execute.
 
 4. Launch **marketing-orchestrator** agent using the Task tool:
    - subagent_type: "marketing-orchestrator"
-   - prompt: "Run a SUSTAINED CAMPAIGN INITIALIZATION for the following brief: [brief]. Pipeline mode: sustained-campaign-init. Campaign parameters: cadence=[cadence], total_batches=[N], content_types=[types], run_schedule=[schedule]. Campaign directory: ~/.marketing-pipeline/campaigns/[slug]/. Execute autonomously: create directories, run research, synthesize strategy, generate content calendar, write config files."
+   - prompt: "Run a SUSTAINED CAMPAIGN INITIALIZATION for the following brief: [brief]. Pipeline mode: sustained-campaign-init. Campaign parameters: cadence=[cadence], total_batches=[N], content_types=[types], run_schedule=[schedule], media_config=[media_config]. Campaign directory: ~/.marketing-pipeline/campaigns/[slug]/. Execute autonomously: create directories, run research, synthesize strategy, generate content calendar, write config files."
 
 5. After orchestrator completes, set up macOS launchd scheduler:
    - **Write campaigns-index.json**:
@@ -100,21 +102,27 @@ $ARGUMENTS - The campaign brief or topic to execute.
      - "Getting started with Fantopy" → "getting-started-with-fantopy"
 
 7. **Function**: `parseWizardFlags(arguments)`
-   - Parses flag arguments like `--cadence weekly --batches 12 --day monday --hour 9 --types blog-post,social-media,email`
-   - Returns object with cadence, total_batches, day, hour, types
+   - Parses flag arguments like `--cadence weekly --batches 12 --day monday --hour 9 --types blog-post,social-media,email --media-config '{"hero-banner":{"provider":"qwen","model":"qwen-image-max"}}'`
+   - Returns object with cadence, total_batches, day, hour, types, media_config
    - If flags are present, skip interactive questions
-   - Default values: cadence="weekly", total_batches=12, day=1, hour=9, types=["blog-post","social-media","email"]
+   - Default values: cadence="weekly", total_batches=12, day=1, hour=9, types=["blog-post","social-media","email"], media_config=null
 
-7. **Function**: `writeCampaignsIndex(file, campaignsData)`
+8. **Function**: `parseMediaConfigFlag(arguments)`
+   - Reads the `--media-config '<json>'` flag when present
+   - Returns a normalized object keyed by asset id (`hero-banner`, `social-graphic`, `blog-header`, `product-teaser`)
+   - Each asset may specify `provider` and `model`
+   - Pass this object into the orchestrator prompt so the media producer can write the same selections into `media-brief.json`
+
+9. **Function**: `writeCampaignsIndex(file, campaignsData)`
    - Writes campaigns-index.json to campaign directory
    - Format matches the hub view structure
    - Includes timestamp and campaign array
 
-8. **Function**: `loadCampaignsIndex(dir)`
+10. **Function**: `loadCampaignsIndex(dir)`
    - Reads campaigns-index.json from specified directory
    - Returns parsed campaigns array or empty array
 
-9. **Function**: `generateSlug(brief)`
+11. **Function**: `generateSlug(brief)`
    - Helper: Creates unique campaign slug from brief
    - Combines kebab-case, removes special chars
    - Examples: "Weekly content" → "weekly-content"
